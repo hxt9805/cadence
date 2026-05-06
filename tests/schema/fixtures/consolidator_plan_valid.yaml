@@ -1,0 +1,39 @@
+plan_version: "v0.3"
+trigger_reason: llm_initiated
+target_streaming_file: streaming/2026-04-21-handoff-redesign.md
+target_topic_slug: handoff-redesign
+
+new_doc_path: discussions/2026-04-21-handoff-redesign.md
+new_doc_content:
+  front_matter:
+    decision_id: D20
+    status: accepted
+    source_streaming_file: streaming/2026-04-21-handoff-redesign.md
+    references: []
+  body:
+    context: |
+      handoff v0.2.2 流水账膨胀,新 session 难续。
+    decision: |
+      handoff 从"备份"改为"书签",15-30 行 schema。
+    rationale: |
+      streaming 已持久化讨论内容,handoff 只需游标。
+    alternatives_considered:
+      - name: 保持 v0.2.2 五类提取
+        rejected_because: 体量不可控
+        from_source: true
+        source: ^entry-20260421-03
+
+streaming_file_updates:
+  file: streaming/2026-04-21-handoff-redesign.md
+  front_matter_update:
+    status: archived
+    superseded_by: discussions/2026-04-21-handoff-redesign.md
+  tombstone_entry:
+    id: ^entry-20260421-99
+    timestamp: 2026-04-21T18:00:00+08:00
+    body: |
+      整合入 discussions/2026-04-21-handoff-redesign.md
+
+active_md_edits: []
+references: []
+warnings: []

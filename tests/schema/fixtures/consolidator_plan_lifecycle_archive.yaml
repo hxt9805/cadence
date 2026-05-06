@@ -1,0 +1,38 @@
+# v0.4 lifecycle fixture (B4 创建)。
+# 当前 validate_consolidator_plan.py 仍是 v0.3 schema,会拒绝此 fixture。
+# 通过 validator 校验需:
+#   - Task B5 扩展 VALID_TRIGGERS += {section_70, section_100, cold_n_rounds, mtime_change}
+#   - Task B5 允许 target_streaming_file / target_topic_slug / streaming_file_updates 在 lifecycle trigger 下为 null
+#   - Task B6 扩展 VALID_STATUS += {implemented, stale, done}
+# 在 B5/B6 落地前,本 fixture 仅作引用 schema 不跑 validate_plan()。
+
+plan_version: "v0.4"
+trigger_reason: section_70
+trigger_section: active_decisions
+target_streaming_file: null
+target_topic_slug: null
+
+new_doc_path: discussions/2026-04-27-tailwind-styling.md
+new_doc_content:
+  front_matter:
+    decision_id: D5
+    status: implemented
+    source_streaming_file: null
+  body:
+    context: |
+      v0.3 决策选 Tailwind 做样式
+    decision: |
+      用 Tailwind CSS
+
+streaming_file_updates: null
+
+active_md_edits:
+  - action: archive_decision
+    target: D5
+    new_status: implemented
+    archive_to: discussions/2026-04-27-tailwind-styling.md
+    reason: "git_log_window 命中 commit 8dc1a91 (paths: src/styles/)"
+    undo_hint: "用户说'撤回归档 D5' → 主 session: Edit _ACTIVE.md 还原 D5 + Edit archive 移除条目"
+
+references: []
+warnings: []

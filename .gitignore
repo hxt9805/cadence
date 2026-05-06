@@ -1,0 +1,24 @@
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Node (若将来引入 tooling)
+node_modules/
+
+# Python(schema validator 测试用)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# 测试产物
+test-cadence-workspace/
+
+.claude/

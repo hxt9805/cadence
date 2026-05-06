@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Cadence CC SessionStart hook.
+# Reads cadence-bootstrap skill body and emits CC hook JSON for context injection.
+#
+# Design: pure-bash JSON escape (no python). Avoids Python stdin/stdout encoding
+# pitfalls on Windows (the GBK→UTF-8 surrogate bug). Inspired by
+# superpowers/hooks/session-start.
+
+set -euo pipefail
+
+# CLAUDE_PLUGIN_ROOT is provided by CC at hook execution time.
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
+if [ -z "$PLUGIN_ROOT" ]; then
+  PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
+BOOTSTRAP_FILE="$PLUGIN_ROOT/skills/cadence-bootstrap/SKILL.md"
+
+# Graceful degrade if SKILL.md missing.
+if [ ! -f "$BOOTSTRAP_FILE" ]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":""}}\n'
+  exit 0
+fi
+
+# Strip YAML frontmatter (---\n...\n---\n). awk processes byte-by-byte regardless
+# of locale, so multi-byte UTF-8 passes through cleanly.
+BODY=$(awk '
+  BEGIN { in_fm=0; fm_done=0 }
+  /^---$/ {
+    if (!fm_done && in_fm) { fm_done=1; in_fm=0; next }
+    if (!fm_done && !in_fm) { in_fm=1; next }
+  }
+  fm_done { print }
+' "$BOOTSTRAP_FILE")
+
+# Trim leading/trailing whitespace.
+BODY="${BODY#"${BODY%%[![:space:]]*}"}"
+BODY="${BODY%"${BODY##*[![:space:]]}"}"
+
+SESSION_CONTEXT=$'<EXTREMELY_IMPORTANT>\n'"$BODY"$'\n</EXTREMELY_IMPORTANT>'
+
+# JSON-escape via bash parameter substitution. Each ${s//old/new} is a single
+# C-level pass; byte-safe (does not depend on locale or Python encoding).
+escape_for_json() {
+  local s="$1"
+  s="${s//\\/\\\\}"   # backslash must come first
+  s="${s//\"/\\\"}"   # double quote
+  s="${s//$'\n'/\\n}" # newline
+  s="${s//$'\r'/\\r}" # carriage return
+  s="${s//$'\t'/\\t}" # tab
+  printf '%s' "$s"
+}
+
+ctx_escaped=$(escape_for_json "$SESSION_CONTEXT")
+
+# Emit via printf (avoids bash 5.3+ heredoc-hang regression — see
+# superpowers issue #571).
+printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"%s"}}\n' "$ctx_escaped"
