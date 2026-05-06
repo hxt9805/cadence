@@ -27,9 +27,45 @@ session 之间通过 `/cadence-handoff` 写"书签式"快照，下次用 `/caden
 
 ### Codex CLI / App / IDE
 
-**Marketplace 模式**（推荐）：在 Codex App **Plugins** 面板点 `Add marketplace` → 给 source 路径（本地 repo 目录或 git URL，Codex 会自动找 `<root>/.agents/plugins/marketplace.json`）→ 安装 `cadence@cadence-dev`。配置自动写入 `~/.codex/config.toml` `[plugins]` 段。
+**前置条件**：
 
-**Symlink 模式**（开发者，免 marketplace 也能用）：详见 [.codex/INSTALL.md](.codex/INSTALL.md)。
+- Codex CLI **v0.117.0+**（`codex --version` 检查）
+- `~/.codex/config.toml` 启用 multi-agent（cadence 依赖 subagent 调度）：
+  ```toml
+  [features]
+  multi_agent = true
+  ```
+
+**Marketplace 模式（推荐）**：
+
+```bash
+codex plugin marketplace add https://github.com/hxt9805/cadence.git
+```
+
+成功后会自动写入 `~/.codex/config.toml`：
+
+```toml
+[marketplaces.cadence-dev]
+source_type = "git"
+source = "https://github.com/hxt9805/cadence.git"
+```
+
+随后在 Codex App **Plugins** 面板里启用 `cadence@cadence-dev`。如果 CLI 添加后没有自动启用，手动在 `~/.codex/config.toml` 末尾加入：
+
+```toml
+[plugins."cadence@cadence-dev"]
+enabled = true
+```
+
+**验证安装**（重启 Codex App / CLI 后）：
+
+```powershell
+codex debug prompt-input "test" | Select-String -Pattern 'cadence'
+```
+
+应该能看到 `cadence:cadence-bootstrap` / `cadence:project-discuss` / `cadence:cadence-init` 等 skill 出现。
+
+**Symlink 模式**（开发者 fallback，免 marketplace 也能用）：详见 [.codex/INSTALL.md](.codex/INSTALL.md)。
 
 > 详细 Codex 形态适配（subagent dispatch 铁律 / sandbox / `$plugin:skill` 触发语法 / context 预算）见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)。
 
@@ -56,6 +92,30 @@ session 之间通过 `/cadence-handoff` 写"书签式"快照，下次用 `/caden
 | 继续之前某次 session | `/cadence-resume` | `$cadence:cadence-resume` |
 
 详细约定见 [`skills/cadence-bootstrap/SKILL.md`](skills/cadence-bootstrap/SKILL.md)。
+
+## 更新插件
+
+cadence 不会自动更新；远端发布新版本后需要手动触发。
+
+### Claude Code
+
+```
+/plugin marketplace update cadence-dev
+/plugin update cadence@cadence-dev
+/clear
+```
+
+`/clear` 让 SessionStart hook 重新触发，加载新版 bootstrap 内容。
+
+> Windows 上 `/plugin marketplace update` 可能因文件锁报 `EBUSY: resource busy or locked`——这是 CC 端的 known issue（CC 自身持有 marketplace 目录文件句柄导致 rename 失败）。临时 workaround：完全退出 CC → `Remove-Item -Recurse -Force "$HOME\.claude\plugins\marketplaces\cadence-dev*"` → 重新打开 CC → 重新跑 `/plugin marketplace add` 安装命令。
+
+### Codex CLI / App
+
+```bash
+codex plugin marketplace upgrade cadence-dev
+```
+
+完成后重启 Codex CLI / App 让新 skill 生效。
 
 ## 故障排查
 
