@@ -192,7 +192,13 @@ Cadence 已初始化：
 - 不一致清单：cadence/discussions/01-inconsistencies.md（如果扫描）
 - (v0.5 起无需修改 CLAUDE.md;cadence 约定通过 plugin/hook 自动注入)
 
-下一步建议：
+⚠️ 下一步必须先做：
+- **运行 `/clear` 重新加载 cadence 协议** — 本 session 启动时项目还未初始化,
+  SessionStart hook 没注入 bootstrap;需要 /clear 让 hook 重新触发,检测到新建
+  的 cadence/_INDEX.md 后注入完整协议(否则记 / 整 / 查行为不完整,project-discuss
+  仅靠 progressive disclosure 弱激活)。后续新 session 会自动加载,只需要这一次。
+
+之后正常使用：
 - 和我说你想讨论的话题，project-discuss 会自动触发
 - 用 /cadence-handoff 在 session 变长时整理到档案
 - 用 /cadence-resume 继续之前的 session

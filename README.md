@@ -35,17 +35,25 @@ session 之间通过 `/cadence-handoff` 写"书签式"快照，下次用 `/caden
 
 ## 使用
 
-cadence 在 session 启动时自动接入：
-- **Claude Code** 通过 SessionStart hook 注入 cadence-bootstrap 全文
-- **Codex** 通过 native skill discovery 加载 cadence-bootstrap 描述并按需取全文
+### 首次使用流程
 
-随后讨论自然进行，cadence 自动记录命中判据的决策。命令对照：
+1. **初始化** — 在项目根目录跑 `/cadence-init`，按提示选模式（新项目极简模板 / 扫描已有项目生成快照）。完成后会创建 `cadence/` 目录骨架。
+2. **重新加载协议** — 运行 `/clear`，让 SessionStart hook 重新触发并把 cadence bootstrap 注入当前 session。
+   > **为什么需要这一步？** hook 只在 session 启动 / `/clear` / `/compact` 时执行；首次 init 是在 session 中途完成的，hook 在你启动 session 时检查到项目尚未初始化、跳过了注入。`/clear` 一次让它重新检测到新建的 `cadence/_INDEX.md`。**后续新 session 自动加载，无需再 clear。**
+3. **开始讨论** — 之后正常和 Claude 讨论项目，cadence 按"已被承接"判据自动落地决策到 `cadence/streaming/`；长 session 时跑 `/cadence-handoff` 整理到档案。
+
+### Session 启动行为
+
+- **已 init 项目**（项目根存在 `cadence/_INDEX.md`）：CC 通过 SessionStart hook 自动注入 bootstrap；Codex 通过 native skill discovery 加载 cadence-bootstrap 描述并按需取全文。
+- **未 init 项目**：bootstrap 不注入，cadence 不接入；用户主动跑 `/cadence-init` 才进入工作流。CC 与 Codex 行为一致。
+
+### 命令对照
 
 | 操作 | Claude Code | Codex |
 | --- | --- | --- |
+| 初始化项目 | `/cadence-init` | `$cadence:cadence-init` |
 | 整理本 session 到档案 | `/cadence-handoff` | `$cadence:cadence-handoff` |
-| 继续之前 session | `/cadence-resume` | `$cadence:cadence-resume` |
-| 初始化新项目骨架 | `/cadence-init` | `$cadence:cadence-init` |
+| 继续之前某次 session | `/cadence-resume` | `$cadence:cadence-resume` |
 
 详细约定见 [`skills/cadence-bootstrap/SKILL.md`](skills/cadence-bootstrap/SKILL.md)。
 
