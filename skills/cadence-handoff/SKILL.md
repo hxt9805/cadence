@@ -92,7 +92,7 @@ streaming 中若干条已整合为 <produced[0]>,详见该 doc
 
 **体量目标**:15-30 行(frontmatter + body)。超 30 行 → 压缩 cursor 为单句、soft_context.notes 限 ≤3 条。
 
-**写入前校验**:`python skills/cadence-handoff/scripts/validate_handoff.py .handoff/<handoff_id>.md`(macOS / Linux 把 `python` 换成 `python3`)必须通过;不通过则停止写入 + 告知用户。
+**写入前校验**:`python ${CLAUDE_PLUGIN_ROOT}/skills/cadence-handoff/scripts/validate_handoff.py .handoff/<handoff_id>.md`(macOS / Linux 把 `python` 换成 `python3`)必须通过;不通过则停止写入 + 告知用户。
 
 ### Step 5:更新 `.handoff/index.json`
 

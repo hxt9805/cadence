@@ -2,7 +2,7 @@
 
 讨论驱动的软件开发工作流插件 — 通过 **记 / 整 / 查** 三阶段记录协议，把 Claude Code / Codex session 的讨论、决策、TODO 自动落地到项目档案中，支持长 session handoff 与跨 session resume。
 
-> 双 harness 支持：Claude Code（SessionStart hook 注入 bootstrap）+ Codex CLI / App / IDE（native skill discovery + Codex 形态调度铁律）。
+> **推荐在 Claude Code 中使用**(first-class 形态)。Codex CLI / App / IDE 通过兼容层支持——SessionStart hook、Task tool、`${CLAUDE_PLUGIN_ROOT}` 在 Codex 没有原生等价,部分体验依赖 LLM 自适应;详见下文 [平台与兼容性](#平台与兼容性)。
 
 ## 这是什么
 
@@ -116,6 +116,38 @@ codex plugin marketplace upgrade cadence-dev
 ```
 
 完成后重启 Codex CLI / App 让新 skill 生效。
+
+## 平台与兼容性
+
+### Harness 形态
+
+cadence 是为 **Claude Code 形态**设计的(依赖 SessionStart hook、Task tool 自主 fork subagent、`${CLAUDE_PLUGIN_ROOT}` 路径变量)。Codex CLI / App / IDE 通过兼容层支持:
+
+| 能力 | Claude Code(first-class) | Codex(兼容层) |
+| --- | --- | --- |
+| Bootstrap 注入 | SessionStart hook 自动 | native skill discovery + LLM 按需取全文 |
+| Subagent fork | Task tool 一键自主 fork | 主 LLM 用 `spawn_agent` 等内置工具模拟 |
+| 插件路径变量 | `${CLAUDE_PLUGIN_ROOT}` 注入 | LLM 按"当前 skill root 的相对路径"自解析 |
+| Slash command | `/cadence-handoff` | `$cadence:cadence-handoff` |
+
+Codex 形态下部分行为**依赖 LLM 自适应**(尤其是路径解析与 subagent 调用形式),corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)。
+
+### 操作系统
+
+| OS | 支持情况 |
+| --- | --- |
+| Windows 10 / 11 | ✅ 主要开发 / 测试平台 |
+| macOS | ⚠️ 静态审查通过(命令名 / shell / awk 跨平台已处理),社区实测反馈待补 |
+| Linux | ⚠️ 同上 |
+
+**命令名差异**(SKILL.md 已含平台备注,此处说明背景):
+
+- Windows:`python skills/cadence-handoff/scripts/validate_handoff.py ...`
+- macOS / Linux:`python3 skills/cadence-handoff/scripts/validate_handoff.py ...`
+
+macOS 12+ 已移除 system `python`,只保留 `python3`;Debian 12+ 等新发行版同样如此。LLM 在跑 cadence 命令时会按 SKILL.md 的平台备注选对的命令名。
+
+如果你在 Mac / Linux 上跑 cadence 遇到问题,欢迎在仓库开 issue 反馈。
 
 ## 故障排查
 
