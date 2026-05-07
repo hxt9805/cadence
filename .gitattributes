@@ -1,0 +1,15 @@
+# Shell scripts must be LF — bash on Windows treats CRLF \r as part of the
+# command and chokes on `set -euo pipefail\r` etc.
+*.sh           text eol=lf
+hooks/session-start text eol=lf
+
+# Windows batch / cmd must be CRLF.
+*.cmd          text eol=crlf
+*.bat          text eol=crlf
+
+# JSON / Markdown / Python: LF for cross-platform consistency.
+*.json         text eol=lf
+*.md           text eol=lf
+*.py           text eol=lf
+*.yaml         text eol=lf
+*.yml          text eol=lf
