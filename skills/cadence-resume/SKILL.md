@@ -40,7 +40,7 @@ is_legacy = (
 - v0.3 → 走 Step 4a
 - legacy v0.2.2 → 走 Step 4b
 
-**判据优先级**:字段判据为主(覆盖 99% 场景);若字段判据**两字段都不存在或都存在**(corner case,如文件损坏或迁移中)→ 调用 `python skills/cadence-handoff/scripts/validate_handoff.py <path>` 兜底:v0.3 合法则走 4a;抛 "legacy v0.2.2 detected" 则走 4b;其他错误 → 告知用户"handoff 文件格式无法识别"。
+**判据优先级**:字段判据为主(覆盖 99% 场景);若字段判据**两字段都不存在或都存在**(corner case,如文件损坏或迁移中)→ 调用 `python skills/cadence-handoff/scripts/validate_handoff.py <path>`(macOS / Linux 把 `python` 换成 `python3`)兜底:v0.3 合法则走 4a;抛 "legacy v0.2.2 detected" 则走 4b;其他错误 → 告知用户"handoff 文件格式无法识别"。
 
 ### Step 4a:v0.3 — content_hashes 对比
 
@@ -93,6 +93,8 @@ v0.2.2 老 handoff 无 content_hashes。回退 mtime 判据:
 resume 成功后（Step 4a/4b 展示给用户后），**立即执行** archive cleanup，防止 resumed 条目永远停留在 `.handoff/index.json`（B1 bug）。
 
 #### 调用方式
+
+> 命令名按平台:Windows = `python`,macOS / Linux = `python3`(下例以 Windows 风格写)
 
 ```bash
 python skills/cadence-resume/handoff_cleanup_helper.py <project_root>/cadence/.handoff/ <handoff_id>

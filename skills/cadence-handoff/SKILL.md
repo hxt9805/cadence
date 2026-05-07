@@ -55,8 +55,9 @@ ACTIVE_HASH=$(git hash-object cadence/_ACTIVE.md)
 **备用路径**(若 git 不可用):
 - Windows(PowerShell):`(certutil -hashfile <path> SHA1 | Select-String -NotMatch "SHA1\|CertUtil").Line.Trim().Replace(" ","")` — 取哈希行,剥离空格
 - Windows(cmd):`for /f "tokens=1" %%i in ('certutil -hashfile ^<path^> SHA1 ^| findstr /v ":"') do @echo %%i` — 取无冒号行第一列
-- Linux/macOS:`sha1sum <path> | awk '{print $1}'` — 取前 40 字符字段
-- Python fallback:`python -c "import hashlib,sys; print(hashlib.sha1(open(sys.argv[1],'rb').read()).hexdigest())" <path>`
+- Linux:`sha1sum <path> | awk '{print $1}'` — 取前 40 字符字段
+- macOS:`shasum -a 1 <path> | awk '{print $1}'` — Mac 默认无 sha1sum,用 shasum
+- Python fallback:`python -c "import hashlib,sys; print(hashlib.sha1(open(sys.argv[1],'rb').read()).hexdigest())" <path>`(命令名:Windows `python` / macOS,Linux `python3`)
 
 结果:40 字符小写 hex;不匹配 `^[0-9a-f]{40}$` → 写入前报错停止。
 
@@ -91,7 +92,7 @@ streaming 中若干条已整合为 <produced[0]>,详见该 doc
 
 **体量目标**:15-30 行(frontmatter + body)。超 30 行 → 压缩 cursor 为单句、soft_context.notes 限 ≤3 条。
 
-**写入前校验**:`python skills/cadence-handoff/scripts/validate_handoff.py .handoff/<handoff_id>.md` 必须通过;不通过则停止写入 + 告知用户。
+**写入前校验**:`python skills/cadence-handoff/scripts/validate_handoff.py .handoff/<handoff_id>.md`(macOS / Linux 把 `python` 换成 `python3`)必须通过;不通过则停止写入 + 告知用户。
 
 ### Step 5:更新 `.handoff/index.json`
 
