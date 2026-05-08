@@ -1,7 +1,7 @@
 {
   "name": "cadence",
-  "version": "0.1.0",
-  "description": "Discussion-driven software development workflow plugin for recording, consolidating, and retrieving session decisions and TODOs.",
+  "version": "0.2.0",
+  "description": "Discussion-driven dev workflow plugin (Claude Code + Codex CLI, CC primary) for recording, consolidating, and retrieving session decisions and TODOs.",
   "author": {
     "name": "hxt9805"
   },

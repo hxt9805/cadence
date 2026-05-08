@@ -63,7 +63,7 @@ rm -rf ~/.codex/cadence
 **Marketplace mode available (since 2026-05-06).**
 
 - ✅ `.codex-plugin/plugin.json` written — Codex plugin manifest with `skills` pointer + `interface` block
-- ✅ `.agents/plugins/marketplace.json` written — repo-scoped marketplace entry (`cadence-dev`)
+- ✅ `.agents/plugins/marketplace.json` written — repo-scoped marketplace entry (`cadence`)
 - ⏸ `scripts/sync-codex-marketplace.sh` still stub — only needed for syncing to external curated marketplace (e.g. `prime-radiant-inc/openai-codex-plugins`); local marketplace mode does not need it
 
 The symlink steps in this file remain valid as a **fallback / developer mode** for users who want to skip marketplace registration. For end-user installation, prefer the marketplace mode in [`README.md`](../README.md#codex-cli--app--ide).

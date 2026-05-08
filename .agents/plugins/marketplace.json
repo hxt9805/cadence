@@ -1,8 +1,8 @@
 {
-  "name": "cadence-dev",
+  "name": "cadence",
   "interface": {
-    "displayName": "Cadence Dev Marketplace",
-    "shortDescription": "Local dev marketplace for cadence plugin (Codex form)"
+    "displayName": "Cadence Marketplace",
+    "shortDescription": "Marketplace for cadence plugin (Codex form)"
   },
   "plugins": [
     {

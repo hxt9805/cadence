@@ -22,7 +22,7 @@ session 之间通过 `/cadence-handoff` 写"书签式"快照，下次用 `/caden
 
 ```
 /plugin marketplace add https://github.com/hxt9805/cadence.git
-/plugin install cadence@cadence-dev
+/plugin install cadence@cadence
 ```
 
 ### Codex CLI / App / IDE
@@ -45,15 +45,15 @@ codex plugin marketplace add https://github.com/hxt9805/cadence.git
 成功后会自动写入 `~/.codex/config.toml`：
 
 ```toml
-[marketplaces.cadence-dev]
+[marketplaces.cadence]
 source_type = "git"
 source = "https://github.com/hxt9805/cadence.git"
 ```
 
-随后在 Codex App **Plugins** 面板里启用 `cadence@cadence-dev`。如果 CLI 添加后没有自动启用，手动在 `~/.codex/config.toml` 末尾加入：
+随后在 Codex App **Plugins** 面板里启用 `cadence@cadence`。如果 CLI 添加后没有自动启用，手动在 `~/.codex/config.toml` 末尾加入：
 
 ```toml
-[plugins."cadence@cadence-dev"]
+[plugins."cadence@cadence"]
 enabled = true
 ```
 
@@ -68,6 +68,38 @@ codex debug prompt-input "test" | Select-String -Pattern 'cadence'
 **Symlink 模式**（开发者 fallback，免 marketplace 也能用）：详见 [.codex/INSTALL.md](.codex/INSTALL.md)。
 
 > 详细 Codex 形态适配（subagent dispatch 铁律 / sandbox / `$plugin:skill` 触发语法 / context 预算）见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)。
+
+## 安装/降级到历史版本
+
+如果不想用最新 stable,想锁某个旧版本,用本地 marketplace fallback。把 `v0.2.0` 换成 [Releases 页](https://github.com/hxt9805/cadence/releases) 上的任意 tag。
+
+### Claude Code
+
+```bash
+git clone --branch v0.2.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.2.0
+# 注意：该目录是 CC 的 marketplace 源,clone 后不要删除,否则 plugin 会失效
+```
+
+然后在 CC 里：
+
+```
+/plugin marketplace add ~/cadence-v0.2.0
+/plugin install cadence@cadence
+```
+
+### Codex CLI / App
+
+```bash
+git clone --branch v0.2.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.2.0
+```
+
+`~/.codex/config.toml` 改成：
+
+```toml
+[marketplaces.cadence]
+source_type = "local"
+source = "/Users/你/cadence-v0.2.0"
+```
 
 ## 使用
 
@@ -100,19 +132,19 @@ cadence 不会自动更新；远端发布新版本后需要手动触发。
 ### Claude Code
 
 ```
-/plugin marketplace update cadence-dev
-/plugin update cadence@cadence-dev
+/plugin marketplace update cadence
+/plugin update cadence@cadence
 /clear
 ```
 
 `/clear` 让 SessionStart hook 重新触发，加载新版 bootstrap 内容。
 
-> Windows 上 `/plugin marketplace update` 可能因文件锁报 `EBUSY: resource busy or locked`——这是 CC 端的 known issue（CC 自身持有 marketplace 目录文件句柄导致 rename 失败）。临时 workaround：完全退出 CC → `Remove-Item -Recurse -Force "$HOME\.claude\plugins\marketplaces\cadence-dev*"` → 重新打开 CC → 重新跑 `/plugin marketplace add` 安装命令。
+> Windows 上 `/plugin marketplace update` 可能因文件锁报 `EBUSY: resource busy or locked`——这是 CC 端的 known issue（CC 自身持有 marketplace 目录文件句柄导致 rename 失败）。临时 workaround：完全退出 CC → `Remove-Item -Recurse -Force "$HOME\.claude\plugins\marketplaces\cadence*"` → 重新打开 CC → 重新跑 `/plugin marketplace add` 安装命令。
 
 ### Codex CLI / App
 
 ```bash
-codex plugin marketplace upgrade cadence-dev
+codex plugin marketplace upgrade cadence
 ```
 
 完成后重启 Codex CLI / App 让新 skill 生效。
