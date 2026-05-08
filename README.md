@@ -36,7 +36,42 @@ session 之间通过 `/cadence-handoff` 写"书签式"快照，下次用 `/caden
   multi_agent = true
   ```
 
-**Marketplace 模式（推荐）**：
+> ⚠️ Codex 0.129 上 marketplace 模式因 [issue #17066](https://github.com/openai/codex/issues/17066) **拒绝**注册 plugin 在 repo 根的 marketplace（CLI add 看似成功但 plugin 实际不会装载）。**当前推荐 Symlink 模式**；marketplace 模式作为实验路径备查，等 Codex 修复后会回归推荐。
+
+**Symlink 模式（推荐）**
+
+```bash
+# 1. clone cadence 到任意位置（下方以 ~/.codex/cadence 为例，可改成任何绝对路径）
+git clone https://github.com/hxt9805/cadence.git ~/.codex/cadence
+
+# 2. 建 symlink：target 必须指向 clone 目录下的 skills/ 子目录
+
+# macOS / Linux：
+mkdir -p ~/.agents/skills
+ln -s ~/.codex/cadence/skills ~/.agents/skills/cadence
+
+# Windows（admin PowerShell：右键 → 以管理员身份运行）：
+New-Item -ItemType Directory -Force -Path "$HOME\.agents\skills" | Out-Null
+New-Item -ItemType SymbolicLink -Path "$HOME\.agents\skills\cadence" -Target "$HOME\.codex\cadence\skills"
+```
+
+> **路径自定义**：上面的 `~/.codex/cadence` 只是推荐位置，可以替换成任意绝对路径（如 `D:\dev\cadence`、`~/projects/cadence`），symlink 的 `-Target` / `ln -s` 源路径同步替换为 `<你的clone路径>/skills`。**关键**：symlink target 必须是 `skills/` 子目录，**不是 repo 根**（否则 Codex 找不到各 skill 的 SKILL.md）。
+>
+> **Windows 用户避免 admin**：打开 `设置 → 隐私和安全性 → 开发人员选项`，把 "**开发人员模式**" 拨到 ON，之后普通 PowerShell 跑 `mklink /D %USERPROFILE%\.agents\skills\cadence %USERPROFILE%\.codex\cadence\skills` 也能创建 symlink，无需 admin。
+
+**验证安装**（重启 Codex 后）：
+
+```powershell
+codex debug prompt-input "test" | Select-String -Pattern 'cadence:'
+```
+
+应该能看到 `cadence:cadence-bootstrap` / `cadence:project-discuss` / `cadence:cadence-init` 等 5 个 skill 出现。
+
+更详细的 Symlink 安装说明（含 macOS / Linux / Windows 各档位 + 卸载步骤）见 [.codex/INSTALL.md](.codex/INSTALL.md)。
+
+**Marketplace 模式（实验性，Codex 0.129 上不稳定）**
+
+> ⚠️ 已知问题：受 [Codex issue #17066](https://github.com/openai/codex/issues/17066) 影响，CLI `marketplace add` 看似成功但 Codex 不会真正装载 plugin（plugin 路径解析逻辑拒绝 repo 根布局）。修复前请用上面的 Symlink 模式。
 
 ```bash
 codex plugin marketplace add https://github.com/hxt9805/cadence.git
@@ -50,22 +85,12 @@ source_type = "git"
 source = "https://github.com/hxt9805/cadence.git"
 ```
 
-随后在 Codex App **Plugins** 面板里启用 `cadence@cadence`。如果 CLI 添加后没有自动启用，手动在 `~/.codex/config.toml` 末尾加入：
+随后在 Codex App **Plugins** 面板里启用 `cadence@cadence`。或手动在 `config.toml` 末尾加入：
 
 ```toml
 [plugins."cadence@cadence"]
 enabled = true
 ```
-
-**验证安装**（重启 Codex App / CLI 后）：
-
-```powershell
-codex debug prompt-input "test" | Select-String -Pattern 'cadence'
-```
-
-应该能看到 `cadence:cadence-bootstrap` / `cadence:project-discuss` / `cadence:cadence-init` 等 skill 出现。
-
-**Symlink 模式**（开发者 fallback，免 marketplace 也能用）：详见 [.codex/INSTALL.md](.codex/INSTALL.md)。
 
 > 详细 Codex 形态适配（subagent dispatch 铁律 / sandbox / `$plugin:skill` 触发语法 / context 预算）见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)。
 
@@ -148,6 +173,35 @@ codex plugin marketplace upgrade cadence
 ```
 
 完成后重启 Codex CLI / App 让新 skill 生效。
+
+## 从早期版本迁移
+
+如果你之前装过 `cadence@cadence-dev`（v0.1.0 阶段的旧 marketplace 名），升级到 v0.2.0+ 时 CC 不会自动迁移 marketplace 注册（CC 把旧 git URL 跟 `cadence-dev` 这个名字 hash 绑定），需要手工清理旧状态。
+
+### Claude Code
+
+```powershell
+# 1. 完全退出 CC（含 system tray）
+# 2. PowerShell 跑：
+Remove-Item -Recurse -Force "$HOME\.claude\plugins\marketplaces\cadence-dev*" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$HOME\.claude\plugins\plugins\cadence@cadence-dev*" -ErrorAction SilentlyContinue
+# 3. 编辑 ~/.claude/plugins/known_marketplaces.json，删除 "cadence-dev" 这个 key 整段
+# 4. 重启 CC，按 "## 安装 → Claude Code" 重新走流程
+```
+
+### Codex CLI / App
+
+```powershell
+# 1. 退出 Codex
+# 2. 编辑 ~/.codex/config.toml：
+#    - 删除 [marketplaces.cadence-dev] 整段
+#    - 删除 [plugins."cadence@cadence-dev"] 整段
+# 3. 清旧 plugin cache：
+Remove-Item -Recurse -Force "$HOME\.codex\plugins\cache\cadence-dev" -ErrorAction SilentlyContinue
+# 4. 重启 Codex，按 "## 安装 → Codex CLI / App / IDE" 走 Symlink 模式重新装
+```
+
+迁移完成后，新版 cadence 在 CC / Codex 上都是 `cadence@cadence`（不再有 `-dev` 后缀）。
 
 ## 平台与兼容性
 

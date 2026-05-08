@@ -12,7 +12,9 @@ Enable cadence's discussion-driven workflow skills in OpenAI Codex CLI via nativ
 git clone https://github.com/hxt9805/cadence.git ~/.codex/cadence
 ```
 
-> Symlink mode is the developer / fallback installation path. For end users, prefer marketplace mode (see [`README.md`](../README.md#codex-cli--app--ide)).
+> **Path is your choice.** The clone location `~/.codex/cadence` is just a convention — pick any absolute path you like (e.g. `~/projects/cadence`, `D:\dev\cadence`). The only constraint is that **the symlink target in step 2 must point to `<your-clone-path>/skills/`** (the `skills/` subdirectory, not the repo root). If you change the clone path, replace `~/.codex/cadence` consistently in step 2.
+
+> **Why Symlink mode is the recommended path on Codex 0.129+.** Marketplace mode is currently blocked by [Codex issue #17066](https://github.com/openai/codex/issues/17066) for plugins whose `.codex-plugin/plugin.json` lives at the repo root (cadence's layout). Until that lands, Symlink is the stable install path. See [`README.md`](../README.md#codex-cli--app--ide) for the full picture.
 
 ### 2. Create the skills symlink
 

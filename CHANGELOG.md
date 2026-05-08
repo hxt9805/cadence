@@ -20,5 +20,9 @@ All notable changes to cadence are documented here. This project adheres to [Sem
 - README repositions Claude Code as primary harness, Codex as compatibility layer
 - `.claude-plugin/marketplace.json` `source` now uses object form with `ref: "v0.2.0"` (pins to git tag)
 
+### Known Issues
+- **Codex marketplace mode is blocked by [Codex issue #17066](https://github.com/openai/codex/issues/17066)** — Codex 0.129's plugin path resolver rejects marketplaces whose plugin sits at the repo root (cadence's layout). CLI `marketplace add` succeeds but plugin is never loaded into session. **Workaround**: use Symlink mode (see [`.codex/INSTALL.md`](.codex/INSTALL.md) and the Codex section in README). Once OpenAI lands a fix, marketplace mode will become recommended again.
+- **CC marketplace rename is not auto-migrated** — CC binds the git URL to the old `cadence-dev` marketplace name in `known_marketplaces.json`. Users who installed v0.1.x must clear that entry manually before the new `cadence` marketplace can register. See "从早期版本迁移" in README.
+
 ### Note
 v0.1.0 was a pre-tag stage release (no git tag, no formal release notes). Starting from v0.2.0, cadence enforces strict SemVer with immutable tags and proper release notes.
