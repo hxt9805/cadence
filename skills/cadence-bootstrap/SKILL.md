@@ -63,7 +63,7 @@ Codex 默认 session policy 偏保守，倾向"主 session 本地解决"。**下
 
 - **不自动执行 handoff / resume / init**。这些由用户显式命令触发。
 - 可以在用户明显 session 终止信号(「今天到这」「改天聊」等)时**提醒命令存在**,但不执行,且同一 session 只提醒一次。
-- 新 session 启动时**不主动读取 .handoff/ 纸条**。用户需要时自己跑 `/cadence-resume`。
+- 新 session 启动时**不主动读取 `cadence/.handoff/` 纸条**。用户需要时自己跑 `/cadence-resume`。
 
 ### Session 启动时的行为(必须执行)
 

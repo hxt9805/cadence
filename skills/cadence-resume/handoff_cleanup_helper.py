@@ -1,9 +1,9 @@
 """B1 修复 — Step 6 archive cleanup helper.
 
 Implements the 6a/6b/6c file IO of cadence-resume Step 6:
-- 6a: remove handoff entry from .handoff/index.json
-- 6b: move .handoff/<id>.md → .handoff/archived/<id>.md
-- 6c: append entry to .handoff/archived/index.json
+- 6a: remove handoff entry from cadence/.handoff/index.json
+- 6b: move cadence/.handoff/<id>.md → cadence/.handoff/archived/<id>.md
+- 6c: append entry to cadence/.handoff/archived/index.json
 
 Idempotent: each step skips if already done.
 """

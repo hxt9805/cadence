@@ -16,6 +16,10 @@ v0.3/v0.4 后记/整/查三阶段覆盖这些职责:
 
 **新本质**:短小书签——提供"游标"(讨论到哪 / 卡在哪)和"soft context"(语气、未明说的注意事项)。体量目标 15-30 行。
 
+## 路径约定
+
+所有 handoff 产物必须位于 `<project-root>/cadence/.handoff/`。不得在项目根创建或读取裸 `.handoff/`;发现时只提示迁移(见 `cadence-resume/SKILL.md` Step 1 前置检测)。
+
 ## 5 步流程(主 agent 执行,不派 writer subagent)
 
 ### Step 1:扫 active streaming → 触发整 阶段（ε 整合）兜底
@@ -61,7 +65,7 @@ ACTIVE_HASH=$(git hash-object cadence/_ACTIVE.md)
 
 结果:40 字符小写 hex;不匹配 `^[0-9a-f]{40}$` → 写入前报错停止。
 
-### Step 4:写 `.handoff/<handoff_id>.md` snapshot
+### Step 4:写 `cadence/.handoff/<handoff_id>.md` snapshot
 
 按 design doc § 12.2 schema:
 
@@ -92,9 +96,9 @@ streaming 中若干条已整合为 <produced[0]>,详见该 doc
 
 **体量目标**:15-30 行(frontmatter + body)。超 30 行 → 压缩 cursor 为单句、soft_context.notes 限 ≤3 条。
 
-**写入前校验**:`python ${CLAUDE_PLUGIN_ROOT}/skills/cadence-handoff/scripts/validate_handoff.py .handoff/<handoff_id>.md`(macOS / Linux 把 `python` 换成 `python3`)必须通过;不通过则停止写入 + 告知用户。
+**写入前校验**:`python ${CLAUDE_PLUGIN_ROOT}/skills/cadence-handoff/scripts/validate_handoff.py cadence/.handoff/<handoff_id>.md`(macOS / Linux 把 `python` 换成 `python3`)必须通过;不通过则停止写入 + 告知用户。
 
-### Step 5:更新 `.handoff/index.json`
+### Step 5:更新 `cadence/.handoff/index.json`
 
 追加新 entry:`{handoff_id, created_at, topic, path}`。保持 json array 形态。
 

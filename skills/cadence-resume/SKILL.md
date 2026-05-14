@@ -9,11 +9,29 @@ description: "继续之前某次 session 的讨论上下文(v0.4:Step 6 archive 
 
 用户跑 `/cadence-resume` 或说"继续上次" → 展示可 resume 的 handoff 列表 → 用户选择 → 加载对应 handoff 上下文 + 对比当前档案状态 → 报告"你上次讨论到哪、和现在有何差异"。
 
+## 路径约定
+
+所有 handoff 产物必须位于 `<project-root>/cadence/.handoff/`。不得在项目根创建或读取裸 `.handoff/`;Step 1 前置检测发现时只提示迁移,不阻断主流程。
+
 ## 流程
 
 ### Step 1:列出可 resume 的 handoff
 
-读 `.handoff/index.json`,按 `created_at` 倒序展示最近 N 条(默认 N=5):
+#### 前置检测(路径漂移护栏)
+
+读取 index 之前,先检测项目根是否存在裸 `.handoff/`(历史版本不一致 bug 痕迹):
+
+- 若 `<project-root>/.handoff/` 存在 **且** `<project-root>/cadence/.handoff/` 不存在 → 一行提示:
+  `⚠️ 检测到 .handoff/ 在项目根,这是 v0.2.0 历史路径不一致 bug 的痕迹。建议:mv .handoff cadence/.handoff 后重试。`
+  本次仍按规范从 `cadence/.handoff/` 读取(为空则展示"无 handoff")。
+- 若两者都存在 → 警告 `⚠️ 同时存在项目根 .handoff/ 和 cadence/.handoff/,请手动合并(以 cadence/.handoff/ 为准)。`
+- 否则静默通过。
+
+检测失败(IO 异常等)→ 不抛、不阻断主流程(参 § Step 6 失败优雅降级风格),继续 Step 1 主体。
+
+#### 主体
+
+读 `cadence/.handoff/index.json`,按 `created_at` 倒序展示最近 N 条(默认 N=5):
 
 ```
 最近 handoff:
@@ -25,7 +43,7 @@ description: "继续之前某次 session 的讨论上下文(v0.4:Step 6 archive 
 
 ### Step 2:用户选择后读取 handoff 快照
 
-`Read .handoff/<handoff_id>.md`,解析 frontmatter。
+`Read cadence/.handoff/<handoff_id>.md`,解析 frontmatter。
 
 ### Step 3:识别版本(v0.3 vs legacy v0.2.2)
 
@@ -61,7 +79,7 @@ is_legacy = (
 
 v0.2.2 老 handoff 无 content_hashes。回退 mtime 判据:
 
-1. Compare mtime of `.handoff/<file>.md` vs current mtime of `cadence/_INDEX.md` and `cadence/_ACTIVE.md`
+1. Compare mtime of `cadence/.handoff/<file>.md` vs current mtime of `cadence/_INDEX.md` and `cadence/_ACTIVE.md`
 2. handoff 晚于档案 → 可直接展示 body「关键事项」段
 3. handoff 早于档案(档案已更新)→ 提示"上次 handoff 后档案有更新,建议用 retriever 查历史" → 走 Step 5
 
@@ -90,7 +108,7 @@ v0.2.2 老 handoff 无 content_hashes。回退 mtime 判据:
 
 ### Step 6: Archive cleanup（v0.4 新增 / B1 修复）
 
-resume 成功后（Step 4a/4b 展示给用户后），**立即执行** archive cleanup，防止 resumed 条目永远停留在 `.handoff/index.json`（B1 bug）。
+resume 成功后（Step 4a/4b 展示给用户后），**立即执行** archive cleanup，防止 resumed 条目永远停留在 `cadence/.handoff/index.json`（B1 bug）。
 
 #### 调用方式
 
@@ -112,9 +130,9 @@ helper 打印每步结果，`exit 0`（即使部分 skip / fail）。
 
 | 子步 | 动作 | 幂等条件（skip） |
 |------|------|-----------------|
-| **6a** | 从 `.handoff/index.json` 移除该 `handoff_id` 条目 | 条目已不在 pending index |
-| **6b** | 移动 `.handoff/<id>.md` → `.handoff/archived/<id>.md`（自动创建 `archived/` 目录） | 目标文件已在 `archived/`，或源文件已不存在 |
-| **6c** | 追加条目（含 `resumed_at` 时间戳）到 `.handoff/archived/index.json` | `archived/index.json` 中已有该 `handoff_id` |
+| **6a** | 从 `cadence/.handoff/index.json` 移除该 `handoff_id` 条目 | 条目已不在 pending index |
+| **6b** | 移动 `cadence/.handoff/<id>.md` → `cadence/.handoff/archived/<id>.md`（自动创建 `archived/` 目录） | 目标文件已在 `archived/`，或源文件已不存在 |
+| **6c** | 追加条目（含 `resumed_at` 时间戳）到 `cadence/.handoff/archived/index.json` | `archived/index.json` 中已有该 `handoff_id` |
 
 #### 幂等性
 
@@ -141,7 +159,7 @@ helper 打印每步结果，`exit 0`（即使部分 skip / fail）。
 若有失败：
 
 ```
-⚠️ Step 6 archive cleanup 部分异常（<step>: <reason>），请手动检查 .handoff/ 目录
+⚠️ Step 6 archive cleanup 部分异常（<step>: <reason>），请手动检查 cadence/.handoff/ 目录
 ```
 
 #### 测试覆盖

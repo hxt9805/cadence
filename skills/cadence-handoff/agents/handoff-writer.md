@@ -120,9 +120,9 @@ status: pending
 以 cadence/_ACTIVE.md（活跃状态）+ cadence/_INDEX.md（项目简述 / 话题词典）为准。本文件只是接续提示。
 ```
 
-### 第 5 步：更新 .handoff/index.json
+### 第 5 步：更新 cadence/.handoff/index.json
 
-如果 `.handoff/index.json` 不存在：
+如果 `cadence/.handoff/index.json` 不存在：
 
 ```json
 {
@@ -141,7 +141,7 @@ status: pending
 
 存在时：append 新条目到 handoffs 数组顶部。
 
-**注意**：只存 `status == "pending"` 的条目。`.handoff/index.json` 不包含 resumed / ignored / archived 条目（这些由 cadence-resume 管理，移动到 `.handoff/archived/index.json`）。此行为与 `cadence/_CONVENTIONS.md` 的「Handoff 生命周期」一致。
+**注意**：只存 `status == "pending"` 的条目。`cadence/.handoff/index.json` 不包含 resumed / ignored / archived 条目（这些由 cadence-resume 管理，移动到 `cadence/.handoff/archived/index.json`）。此行为与 `cadence/_CONVENTIONS.md` 的「Handoff 生命周期」一致。
 
 ### 第 6 步：检查 _INDEX.md / _ACTIVE.md 上限
 
@@ -153,7 +153,7 @@ status: pending
 {
   "status": "success",
   "handoff_id": "{timestamp}",
-  "handoff_file": ".handoff/{timestamp}.md",
+  "handoff_file": "cadence/.handoff/{timestamp}.md",
   "writes": [
     {
       "file": "cadence/_ACTIVE.md",
@@ -206,7 +206,7 @@ status: pending
 | 写文件失败（权限/磁盘满） | 返回 error 和 partial_output |
 | JSON 格式错误 | 返回 error |
 | 某个 discussion 文档路径冲突（同名） | 在文件名加 `-02` 后缀 |
-| 并发写 `.handoff/index.json`（多 session 同时 handoff） | **不做锁保护**，遵循 `_CONVENTIONS.md` 并发约定。极低概率条目丢失由用户手动修复（从 `.handoff/<timestamp>.md` 快照恢复） |
+| 并发写 `cadence/.handoff/index.json`（多 session 同时 handoff） | **不做锁保护**，遵循 `_CONVENTIONS.md` 并发约定。极低概率条目丢失由用户手动修复（从 `cadence/.handoff/<timestamp>.md` 快照恢复） |
 
 ## 职责边界
 

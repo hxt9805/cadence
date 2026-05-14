@@ -384,8 +384,8 @@ v0.4 沿用 v0.3 三阶段，命名简化为记/整/查（α/ε/ρ）（详见 `
 
 handoff 条目的四种状态：
 
-- **pending** — 新创建，存于 `.handoff/index.json`，文件在 `.handoff/<timestamp>.md`
-- **resumed** — 被 `/cadence-resume` 拉起继续。文件移到 `.handoff/archived/`，条目从 `index.json` 移除、追加到 `archived/index.json`
+- **pending** — 新创建，存于 `cadence/.handoff/index.json`，文件在 `cadence/.handoff/<timestamp>.md`
+- **resumed** — 被 `/cadence-resume` 拉起继续。文件移到 `cadence/.handoff/archived/`，条目从 `cadence/.handoff/index.json` 移除、追加到 `cadence/.handoff/archived/index.json`
 - **ignored** — 用户在 resume 列表中显式忽略。处理同 resumed
 - **archived**（过期） — 创建超 **30 天** 未 resumed，自动移到 archived/
 

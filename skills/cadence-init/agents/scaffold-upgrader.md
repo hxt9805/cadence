@@ -109,7 +109,7 @@ description: >
 ## 授权边界
 
 - **只动 cadence/ 目录下的元文件**（`_INDEX.md` / `_ACTIVE.md`）
-- **不动** `discussions/` / `phases/` / `.handoff/` / `_archive/`
+- **不动** `discussions/` / `phases/` / `cadence/.handoff/` / `_archive/`
 - **不动** 项目根 `CLAUDE.md`（fragment 升级由 cadence-init 主流程负责，不是本 subagent）
 - **不创建** discussion 文档（超限时只提示用户，不自动建）
 - **只读**：可读 `_INDEX.md` / `_CONVENTIONS.md` / `_INDEX-HISTORY.md` 做对照
