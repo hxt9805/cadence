@@ -2,7 +2,7 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
-## [Unreleased]
+## [0.2.1] - 2026-05-14
 
 ### Fixed
 - **handoff 路径文档不一致**(自 v0.1.0 起遗留):多处 SKILL.md / agents 文档对 `.handoff/` 位置字面描述不一致(`cadence/.handoff/` vs 裸 `.handoff/`),导致不同 Claude 实例可能将 handoff 文件写到项目根而非 `cadence/.handoff/`。统一所有路径引用为 `cadence/.handoff/` + 在 `cadence-handoff` / `cadence-resume` 顶部加路径约定声明 + `cadence-resume` Step 1 加前置检测护栏(发现项目根 `.handoff/` 提示迁移)。
