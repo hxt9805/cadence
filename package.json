@@ -1,0 +1,8 @@
+{
+  "name": "cadence",
+  "version": "0.3.0",
+  "description": "Discussion-driven workflow plugin for Claude Code / OpenCode / Codex",
+  "type": "module",
+  "main": ".opencode/plugin/cadence.js",
+  "license": "MIT"
+}

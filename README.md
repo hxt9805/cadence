@@ -2,7 +2,7 @@
 
 讨论驱动的软件开发工作流插件 — 通过 **记 / 整 / 查** 三阶段记录协议，把 Claude Code / Codex session 的讨论、决策、TODO 自动落地到项目档案中，支持长 session handoff 与跨 session resume。
 
-> **推荐在 Claude Code 中使用**(first-class 形态)。Codex CLI / App / IDE 通过兼容层支持——SessionStart hook、Task tool、`${CLAUDE_PLUGIN_ROOT}` 在 Codex 没有原生等价,部分体验依赖 LLM 自适应;详见下文 [平台与兼容性](#平台与兼容性)。
+> **Claude Code 与 OpenCode 都是 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 通过兼容层支持——SessionStart hook、Task tool、`${CLAUDE_PLUGIN_ROOT}` 在 Codex 没有原生等价,部分体验依赖 LLM 自适应;详见下文 [平台与兼容性](#平台与兼容性)。
 
 ## 这是什么
 
@@ -24,6 +24,22 @@ session 之间通过 `/cadence-handoff` 写"书签式"快照，下次用 `/caden
 /plugin marketplace add https://github.com/hxt9805/cadence.git
 /plugin install cadence@cadence
 ```
+
+### OpenCode
+
+在 `opencode.json`（global 或 project-level）的 `plugin` 数组里加入 cadence：
+
+```json
+{
+  "plugin": ["cadence@git+https://github.com/hxt9805/cadence.git"]
+}
+```
+
+重启 OpenCode。plugin manager 会自动 clone 仓库、注册 5 个 skill（自动暴露为 `/cadence-init` / `/cadence-handoff` / `/cadence-resume` / `/cadence-bootstrap` / `/project-discuss` slash command），并注册 `recall-retriever` / `recall-consolidator` / `recall-analyzer` 三个 named subagent（context 隔离，与 CC 等价）。
+
+`bootstrap` 自动注入只在项目根存在 `cadence/_INDEX.md`（即跑过 `/cadence-init`）时生效——未 init 项目不会被污染。
+
+详细说明（含 Windows install 故障排查、版本锁定、卸载步骤）见 [`.opencode/INSTALL.md`](.opencode/INSTALL.md)。
 
 ### Codex CLI / App / IDE
 
@@ -131,22 +147,22 @@ source = "/Users/你/cadence-v0.2.0"
 ### 首次使用流程
 
 1. **初始化** — 在项目根目录跑 `/cadence-init`，按提示选模式（新项目极简模板 / 扫描已有项目生成快照）。完成后会创建 `cadence/` 目录骨架。
-2. **重新加载协议** — 运行 `/clear`，让 SessionStart hook 重新触发并把 cadence bootstrap 注入当前 session。
-   > **为什么需要这一步？** hook 只在 session 启动 / `/clear` / `/compact` 时执行；首次 init 是在 session 中途完成的，hook 在你启动 session 时检查到项目尚未初始化、跳过了注入。`/clear` 一次让它重新检测到新建的 `cadence/_INDEX.md`。**后续新 session 自动加载，无需再 clear。**
+2. **重新加载协议** — **CC 用户**运行 `/clear`，让 SessionStart hook 重新触发并把 cadence bootstrap 注入当前 session；**OpenCode 用户**重启 OpenCode 让 plugin re-init；**Codex 用户**重新开启 session 让 native skill discovery 重新扫描。
+   > **为什么需要这一步？** bootstrap 注入只在 session 启动时检查项目状态；首次 init 是在 session 中途完成的，注入逻辑在你启动 session 时检查到项目尚未初始化、跳过了注入。重启 / clear 一次让它重新检测到新建的 `cadence/_INDEX.md`。**后续新 session 自动加载，无需再操作。**
 3. **开始讨论** — 之后正常和 Claude 讨论项目，cadence 按"已被承接"判据自动落地决策到 `cadence/streaming/`；长 session 时跑 `/cadence-handoff` 整理到档案。
 
 ### Session 启动行为
 
-- **已 init 项目**（项目根存在 `cadence/_INDEX.md`）：CC 通过 SessionStart hook 自动注入 bootstrap；Codex 通过 native skill discovery 加载 cadence-bootstrap 描述并按需取全文。
-- **未 init 项目**：bootstrap 不注入，cadence 不接入；用户主动跑 `/cadence-init` 才进入工作流。CC 与 Codex 行为一致。
+- **已 init 项目**（项目根存在 `cadence/_INDEX.md`）：CC 通过 SessionStart hook 自动注入 bootstrap；OpenCode 通过 plugin `experimental.chat.messages.transform` hook 自动注入（行为与 CC 等价）；Codex 通过 native skill discovery 加载 cadence-bootstrap 描述并按需取全文。
+- **未 init 项目**：bootstrap 不注入，cadence 不接入；用户主动跑 `/cadence-init` 才进入工作流。CC / OpenCode / Codex 行为一致。
 
 ### 命令对照
 
-| 操作 | Claude Code | Codex |
-| --- | --- | --- |
-| 初始化项目 | `/cadence-init` | `$cadence:cadence-init` |
-| 整理本 session 到档案 | `/cadence-handoff` | `$cadence:cadence-handoff` |
-| 继续之前某次 session | `/cadence-resume` | `$cadence:cadence-resume` |
+| 操作 | Claude Code | OpenCode | Codex |
+| --- | --- | --- | --- |
+| 初始化项目 | `/cadence-init` | `/cadence-init` | `$cadence:cadence-init` |
+| 整理本 session 到档案 | `/cadence-handoff` | `/cadence-handoff` | `$cadence:cadence-handoff` |
+| 继续之前某次 session | `/cadence-resume` | `/cadence-resume` | `$cadence:cadence-resume` |
 
 详细约定见 [`skills/cadence-bootstrap/SKILL.md`](skills/cadence-bootstrap/SKILL.md)。
 
@@ -207,16 +223,16 @@ Remove-Item -Recurse -Force "$HOME\.codex\plugins\cache\cadence-dev" -ErrorActio
 
 ### Harness 形态
 
-cadence 是为 **Claude Code 形态**设计的(依赖 SessionStart hook、Task tool 自主 fork subagent、`${CLAUDE_PLUGIN_ROOT}` 路径变量)。Codex CLI / App / IDE 通过兼容层支持:
+cadence 在 **Claude Code 与 OpenCode 上为 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 通过兼容层支持:
 
-| 能力 | Claude Code(first-class) | Codex(兼容层) |
-| --- | --- | --- |
-| Bootstrap 注入 | SessionStart hook 自动 | native skill discovery + LLM 按需取全文 |
-| Subagent fork | Task tool 一键自主 fork | 主 LLM 用 `spawn_agent` 等内置工具模拟 |
-| 插件路径变量 | `${CLAUDE_PLUGIN_ROOT}` 注入 | LLM 按"当前 skill root 的相对路径"自解析 |
-| Slash command | `/cadence-handoff` | `$cadence:cadence-handoff` |
+| 能力 | Claude Code（first-class） | OpenCode（first-class） | Codex（兼容层） |
+| --- | --- | --- | --- |
+| Bootstrap 注入 | SessionStart hook 自动 | plugin `experimental.chat.messages.transform` hook 自动 | native skill discovery + LLM 按需取全文 |
+| Subagent fork | Task tool 一键自主 fork（CC 自动加载 `agents/*.md`） | Task tool 一键自主 fork（plugin 启动时注册 named subagent，prompt body 预加载） | 主 LLM 用 `spawn_agent` + XML 包裹模拟 |
+| 插件路径变量 | `${CLAUDE_PLUGIN_ROOT}` 注入 | LLM 按"当前 skill root 的相对路径"自解析 | LLM 按"当前 skill root 的相对路径"自解析 |
+| Slash command | `/cadence-handoff` | `/cadence-handoff`（OpenCode 自动从 skill name 生成） | `$cadence:cadence-handoff` |
 
-Codex 形态下部分行为**依赖 LLM 自适应**(尤其是路径解析与 subagent 调用形式),corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)。
+Codex 形态下部分行为**依赖 LLM 自适应**（尤其是路径解析与 subagent 调用形式），corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)；OpenCode 形态的工具映射见 [`skills/project-discuss/references/opencode-tools.md`](skills/project-discuss/references/opencode-tools.md)。
 
 ### 操作系统
 
@@ -245,6 +261,10 @@ macOS 12+ 已移除 system `python`,只保留 `python3`;Debian 12+ 等新发行�
 
 - **改用 HTTPS（推荐）**：直接用[安装段](#claude-code)给出的完整 URL 命令 `/plugin marketplace add https://github.com/hxt9805/cadence.git`，对所有人都通用，不依赖 SSH。
 - **配置 GitHub SSH key**：参考 [GitHub 官方文档](https://docs.github.com/cn/authentication/connecting-to-github-with-ssh) 一次性完成配置，之后简写形式也能用。
+
+### OpenCode 安装 / plugin 加载问题
+
+OpenCode 形态的常见失败模式（plugin 未加载、bootstrap 未注入、Windows `git+https` 安装失败、subagent 调用报 `Unknown agent type` 等）详见 [`.opencode/INSTALL.md`](.opencode/INSTALL.md) 的「Troubleshooting」段。
 
 ## License
 

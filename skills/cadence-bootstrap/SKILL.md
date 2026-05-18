@@ -31,9 +31,9 @@ description: Use when starting any conversation in a cadence-managed project (pr
 - 用户信号永远优先:「记一下」必记、「别记」不记、「撤回」追加 tombstone。
 - 详细协议见 `cadence/_CONVENTIONS.md` 的「记录判据(v0.4)」+「三阶段通路关系(v0.4)」+「征询图景」节。
 
-### Codex 形态调度铁律（CC 形态可忽略本节）
+### Codex 形态调度铁律（CC / OpenCode 形态可忽略本节）
 
-> 仅适用于 Codex CLI / App / IDE 形态；CC 形态有 SessionStart hook + Task tool 自动覆盖，本节无效。
+> 仅适用于 Codex CLI / App / IDE 形态；CC 与 OpenCode 形态都有自动 bootstrap 注入 + 原生 Task tool fork named subagent（plugin 启动时注册），本节无效。OpenCode 形态的工具映射另见 `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/opencode-tools.md`。
 
 Codex 默认 session policy 偏保守，倾向"主 session 本地解决"。**下列三类操作必须走 subagent，禁止主 session 直接读 cadence 档案**：
 
