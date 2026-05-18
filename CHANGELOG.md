@@ -2,6 +2,27 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.3.0] - 2026-05-18
+
+引入 **OpenCode 形态 first-class 支持**,cadence 现在跨三个 harness 平台:Claude Code(first-class)、OpenCode(first-class)、Codex CLI / App / IDE(兼容层)。
+
+### Added
+- **`.opencode/plugin/cadence.js`** — OpenCode JS plugin。`config` hook 注入 `skills.paths` + 注册 3 个 named subagent(`recall-retriever` / `recall-consolidator` / `recall-analyzer`)到 `cfg.agent[]`,system prompt 从 `skills/project-discuss/agents/*.md` 预加载;`experimental.chat.messages.transform` hook 在 cadence-managed 项目(根含 `cadence/_INDEX.md`)里自动注入 cadence-bootstrap 内容到首条 user message。
+- **`package.json`** — 让 OpenCode 能通过 `cadence@git+https://github.com/hxt9805/cadence.git` 安装。
+- **`.opencode/INSTALL.md`** — OpenCode 安装指南(含 Windows install 故障排查、版本锁定、卸载步骤)。
+- **`skills/project-discuss/references/opencode-tools.md`** — OpenCode 形态工具映射(SessionStart 注入 / Subagent fork / Slash command / `${CLAUDE_PLUGIN_ROOT}` 解析 / context 预算的等价机制)。
+
+### Changed
+- `README.md` 顶部从「推荐 Claude Code,Codex 兼容」改为「Claude Code 与 OpenCode 均 first-class,Codex 兼容层」;新增 OpenCode 安装段;命令对照表加 OpenCode 列;平台兼容性对比表扩展为三平台。
+- `cadence-bootstrap` 「Codex 形态调度铁律」标题维持(CC / OpenCode 形态可忽略本节),OpenCode 形态下不需要等价铁律——Task tool 原生支持 named subagent fork + context 隔离,与 CC 等价。
+
+### Platform Status
+| Harness | 形态 | Bootstrap 注入 | Subagent fork | Slash command |
+| --- | --- | --- | --- | --- |
+| Claude Code | first-class | SessionStart hook | Task tool + named agent | `/cadence-*`(`commands/` routing) |
+| OpenCode | first-class | plugin message transform hook | Task tool + plugin 注册 named subagent | `/cadence-*`(skill name 自动生成) |
+| Codex CLI / App / IDE | 兼容层 | native skill discovery | `spawn_agent` + XML 包裹 | `$cadence:cadence-*` |
+
 ## [0.2.1] - 2026-05-14
 
 ### Fixed
