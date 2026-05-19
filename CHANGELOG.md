@@ -2,6 +2,12 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.3.1] - 2026-05-19
+
+### Changed
+- **recording-protocol.md**: 新增「写入原则：假设读者无上下文」—— entry 写入时假设下游 session 读者对本次讨论一无所知，要求 `chosen` 包含足够特异性、技术规格写出类型/签名/约束、依赖约束在 `context` 注明；附加"特异性 ≠ 冗长"桥接句，防止原则被误解为鼓励冗长。
+- **recording-protocol.md + project-discuss/SKILL.md**: 反驳 #5 措辞对齐 bootstrap 立场（"漏记 > 噪音"），从"漏写的代价远大于写了不读"改为"判断不重要的标准是承接信号而非主观感觉，噪音风险由整合阶段处理"，消除三处文件间的自相矛盾。
+
 ## [0.3.0] - 2026-05-18
 
 引入 **OpenCode 形态 first-class 支持**,cadence 现在跨三个 harness 平台:Claude Code(first-class)、OpenCode(first-class)、Codex CLI / App / IDE(兼容层)。
