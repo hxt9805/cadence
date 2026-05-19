@@ -4,9 +4,12 @@ All notable changes to cadence are documented here. This project adheres to [Sem
 
 ## [0.3.1] - 2026-05-19
 
+### Fixed
+- **跨 session 信息衰减**：streaming entry 被写入的 LLM（拥有完整讨论上下文）和下游 session 读取的 LLM（无上下文）之间存在信息不对称，导致下游基于不完整记录产出设计文档时出现遗漏或错误（如字段类型缺失、决策细节丢失）。本次通过两条协议层修改消解此问题：
+
 ### Changed
-- **recording-protocol.md**: 新增「写入原则：假设读者无上下文」—— entry 写入时假设下游 session 读者对本次讨论一无所知，要求 `chosen` 包含足够特异性、技术规格写出类型/签名/约束、依赖约束在 `context` 注明；附加"特异性 ≠ 冗长"桥接句，防止原则被误解为鼓励冗长。
-- **recording-protocol.md + project-discuss/SKILL.md**: 反驳 #5 措辞对齐 bootstrap 立场（"漏记 > 噪音"），从"漏写的代价远大于写了不读"改为"判断不重要的标准是承接信号而非主观感觉，噪音风险由整合阶段处理"，消除三处文件间的自相矛盾。
+- **recording-protocol.md §2**：新增「写入原则：假设读者无上下文」，要求 entry 写入时设身处地为下游读者考虑——`chosen` 包含足够特异性、技术规格写出类型/签名/约束、依赖约束在 `context` 注明。附加"特异性 ≠ 冗长"桥接句，防止原则被误解为鼓励冗长。
+- **recording-protocol.md §7 + project-discuss/SKILL.md §6**：反驳 #5 措辞对齐 bootstrap 立场（"漏记 > 噪音"），从"漏写的代价远大于写了不读"改为"判断不重要的标准是承接信号而非主观感觉，噪音风险由整合阶段处理"。此前三处文件存在自相矛盾（record §5 说不确定时倾向不记、§7 反驳说漏写代价大、bootstrap 说漏记 > 噪音），本次统一消除。
 
 ## [0.3.0] - 2026-05-18
 
