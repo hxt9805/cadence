@@ -2,6 +2,11 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.3.2] - 2026-05-21
+
+### Changed
+- **recording-protocol.md §2**：在「写入原则：假设读者无上下文」章节后新增 `#### 信息密度正反例` 子节，把 v0.3.1 引入的 context-loss awareness 原则具象化为可对照的真实例子（❌ 密度过低 vs ✅ 密度足够，使用 UX 决策案例）。设计意图：让"密度足够"的标准从抽象描述变为视觉对照，降低 LLM 在写 entry 时的"自由发挥"空间。本次纯文档改动，不动 schema、validator、字段必填要求。
+
 ## [0.3.1] - 2026-05-19
 
 ### Fixed

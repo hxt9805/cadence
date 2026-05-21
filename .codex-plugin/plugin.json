@@ -1,6 +1,6 @@
 {
   "name": "cadence",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Discussion-driven dev workflow plugin (Claude Code + OpenCode first-class, Codex CLI compat layer) for recording, consolidating, and retrieving session decisions and TODOs.",
   "author": {
     "name": "hxt9805"
