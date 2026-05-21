@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List
 
+import _common  # noqa: F401  # imported for UTF-8 stdout/stderr reconfigure side-effect (Windows GBK consoles)
+
 try:
     import yaml
 except ImportError as e:

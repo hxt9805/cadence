@@ -45,6 +45,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import _common  # noqa: F401  # imported for UTF-8 stdout/stderr reconfigure side-effect (Windows GBK consoles)
+
 try:
     import yaml
 except ImportError as e:

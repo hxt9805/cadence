@@ -23,6 +23,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
+import _common  # noqa: F401  # imported for UTF-8 stdout/stderr reconfigure side-effect (Windows GBK consoles)
+
 ENTRY_HEADER = re.compile(
     r"^\^entry-(?P<date>\d{8})-(?P<seq>\d{2,})\s+"
     r"\[(?P<ts>[^\]]+)\]\s+(?P<summary>.+)$"
