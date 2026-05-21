@@ -2,6 +2,38 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.4.0] - 2026-05-21
+
+正式承认 cadence 协议 v0.4 milestone,**消除 plugin SemVer 与 `recording-protocol.md` 内部协议号自 v0.3.0 起累积的双轨错位**(此前 SKILL.md / agents 跨 5 文件 29 处提及 "v0.4 状态机 / 三阶段 / 单判据",但 CHANGELOG 无 [0.4.0]、git tag 只到 v0.3.1)。
+
+本次 minor bump 不引入新功能——而是**追认 v0.4 协议在 v0.3.x 期间已落地的语义升级**。plugin 包号与 protocol version 自此对齐:协议语义变化触发包号 minor 或 major bump,文档微调走 patch。
+
+### Changed
+- **plugin SemVer 0.3.2 → 0.4.0**:同步 `package.json` / `.claude-plugin/plugin.json` / `.codex-plugin/plugin.json` / `.claude-plugin/marketplace.json`(version + ref)。
+
+### Protocol v0.3 → v0.4 milestone(已落地)
+
+下列协议变化在 v0.3.0 / v0.3.1 / v0.3.2 期间陆续合入,本次统一承认为 milestone:
+
+- **三阶段直白命名** α/ε/ρ → 记 / 整 / 查
+- **承接对象扩展**:用户对中间决定的承接("嗯,先排除 C")纳入判据
+- **状态机引入**:`accepted` / `implemented` / `stale` / `superseded`(决策);`pending` / `done`(TODO);`open` / `resolved`(待决);`validate_consolidator_plan.py` `DECISION_STATUSES` 等已实现
+- **Phase 化骨架**:`project-discuss/SKILL.md` 从散装 13 节重构为 8 节
+- **强 schema 降建议**:`consolidator_plan` 中 `decision_id` / `source_streaming_file` / `body` 等从必填降建议,`status` 仍必填
+- **借口反驳表**:`project-discuss/SKILL.md` § 6 新增
+- **段独立 70/100 阈值 trigger**:`_ACTIVE.md` 各段独立条数上限 + 70% 软警告 / 100% 硬阈值
+- **undo_hint warning(v0.4 双 API)**:`validate_plan_with_warnings()` 收集软警告
+- **handoff content_hashes(v0.3 起)**:handoff 改为书签 + sha1 校验,resume 时检测 _INDEX / _ACTIVE 漂移
+- **Step 6 archive cleanup**:`cadence-resume` 归档旧 handoff(B1 修复)
+
+### TBD(下个 patch 完成)
+
+- **Task B5:VALID_TRIGGERS 集合扩展**:`recording-protocol.md` 已列 `section_70` / `section_100` / `cold_n_rounds` / `mtime_change` 4 类 v0.4 新 trigger,但 `validate_consolidator_plan.py` 仍是 v0.3 集合 `{llm_initiated, handoff_sweep}`,会拒绝 lifecycle plan。fixture `tests/schema/fixtures/consolidator_plan_lifecycle_archive.yaml` 顶部注释已记录此 gap。计划在 0.4.1 扩展 VALID_TRIGGERS 集合 + 允许 lifecycle trigger 下 `target_streaming_file` / `target_topic_slug` / `streaming_file_updates` 为 null。
+
+### Migration
+
+无破坏性变化。已安装 0.3.x 的用户卸载重装即可(marketplace ref 已更新到 v0.4.0)。protocol 层在 v0.3.x 期间已实质生效,既有 streaming / discussions / handoff 文件继续合法。
+
 ## [0.3.2] - 2026-05-21
 
 ### Changed
