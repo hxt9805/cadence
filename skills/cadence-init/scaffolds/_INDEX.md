@@ -20,7 +20,6 @@ _关键词 → 文档 pointer，帮 Claude 快速定位相关文档。新建 dis
 - 完整文档索引：`_INDEX-DOCS.md`
 - 历史讨论记录（14-30 天）：`_INDEX-HISTORY.md`
 - 归档（超 30 天）：`_archive/`
-- 项目约定：`_CONVENTIONS.md`
 - 项目快照（如有）：`discussions/00-project-snapshot.md`
 - 不一致清单（如有）：`discussions/01-inconsistencies.md`
 

@@ -93,7 +93,7 @@ const getBootstrapContent = () => {
 - \`Task\` tool fork named subagent → OpenCode \`Task\` tool，参数 \`subagent_type\` 填 "recall-retriever" / "recall-consolidator" / "recall-analyzer"（本插件已在 OpenCode 注册这 3 个 named subagent，\`prompt\` 参数传具体任务输入；agent body 已由插件预加载，无需手动读 \`agents/*.md\` 再传入）
 - \`Skill\` tool → OpenCode 原生 \`skill\` tool；或直接用 \`/<skill-name>\` 触发（OpenCode 自动把 \`skills/<name>/SKILL.md\` 暴露为同名 slash command）
 - \`Read\` / \`Write\` / \`Edit\` / \`Bash\` → OpenCode 原生同名工具
-- \`\${CLAUDE_PLUGIN_ROOT}\` → 该变量在 OpenCode 上不展开；遇到该路径前缀时理解为「当前 plugin / skill root 的相对路径」并自行 resolve（与 Codex 形态相同的策略，详见 \`skills/project-discuss/references/codex-tools.md\` § 4）
+- \`\${CLAUDE_PLUGIN_ROOT}\` → 该变量在 OpenCode 上不展开；遇到该路径前缀时理解为「当前 plugin / skill root 的相对路径」并自行 resolve（与 Codex 形态相同的策略，详见 \`skills/project-discuss/references/harness-adapters.md\` § 5）
 
 **Slash command**：\`/cadence-init\` / \`/cadence-handoff\` / \`/cadence-resume\` 在 OpenCode 上由 skill name 自动生成，行为等价于 CC。`;
 

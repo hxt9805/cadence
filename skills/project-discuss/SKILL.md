@@ -14,167 +14,138 @@ description: >
 
 # Project Discuss
 
-管理项目讨论、记录决策、处理查询、记录 incidents。Cadence 工作流阶段 A 的核心 skill。
+L1 协议入口：管理项目讨论、记录决策、处理查询、记录 incidents。
 
-本 SKILL.md 是主入口（动作骨架 + Phase 化导航 + 借口反驳表）。细则分散在 `references/` 下，按需读取：
+本 SKILL.md 是动作骨架 + Phase 化导航。L0 借口反驳 4 项（#1/#2/#4/#5）+ 单判据 happy path 已在 `cadence-bootstrap/SKILL.md` inline；细则单一权威源在 `references/`，按需读取：
 
-- `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/recording-protocol.md` — 记录行为细则（判据 / 三 Phase 协议 / schema / 借口反驳表）
-- `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/query-behavior.md` — 查询行为规则（加载策略 / 4 trigger 主动重读 / retriever 调用 / 路由表管理）
-- `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/doc-reliability-protocol.md` — 文档可信度协议（L1-L4 分级）
-- `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/incident-handling.md` — incident 记录规则（触发条件 / 模板）
-- `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/codex-tools.md` — **Codex CLI 形态专用**：SessionStart 注入 / subagent fork / slash command / context 预算的等价机制映射（CC 形态可忽略）
+- `references/recording-protocol.md` — 记 阶段细则 + 信息密度正反例 + entry schema + **incidents 附录（v0.5 合并 incident-handling.md）**
+- `references/query-behavior.md` — 查询行为 + 4 trigger 主动重读 + **文档可信度 L1-L4（v0.5 合并 doc-reliability-protocol.md）**
+- `references/harness-adapters.md` — **Codex `spawn_agent` + OpenCode 工具映射（v0.5 合并 codex-tools.md + opencode-tools.md）**
 
-## § 1 讨论开始前（必做）
+## § 1. 讨论开始前（必做）
 
-### 第 1 步：检查 cadence 骨架是否存在
+### 第 1 步：检查 cadence 骨架
 
 读 `cadence/_INDEX.md`：
 
-- 不存在 → **不自己 scaffold**，告诉用户：
-
-  ```
-  看起来这是新项目，还没初始化 cadence。我可以先跑 /cadence-init
-  建好骨架，然后我们继续讨论。要开始吗？
-  ```
-
-  - 用户同意 → 调 `Skill("cadence-init")`，初始化后继续
-  - 用户拒绝 → 正常讨论，不记录
-
+- 不存在 → 告知用户："看起来这是新项目，还没初始化 cadence。我可以先跑 `/cadence-init` 建好骨架，然后继续讨论。要开始吗？"
 - 存在 → 继续第 2 步
 
 ### 第 2 步：建立全局上下文
 
-1. **读 `cadence/_INDEX.md`**（纯索引，< 800 tokens）——项目简述 / 话题词典 / 快速导航
-2. **Session 内第一次需要活跃状态时，读 `cadence/_ACTIVE.md`**（~1800 tokens）——活跃决策 / 待决 / TODO / 最近讨论
-3. **判断是否需要加载更多**（按 `references/query-behavior.md` 的加载策略）：
-   - 用户提到的话题在词典里 → 读指向的文档
-   - 用户问历史话题（> 14 天前）→ 读 `_INDEX-HISTORY.md`
-4. **不全量加载**：每次最多加载 2-4 个相关文档；默认不重读，4 trigger 时重读（见 `references/query-behavior.md`）
+1. 读 `cadence/_INDEX.md`（纯索引，< 800 tokens）—— 项目简述 / 话题词典 / 快速导航
+2. Session 内第一次需要活跃状态时，读 `cadence/_ACTIVE.md`（~1800 tokens）—— 活跃决策 / 待决 / TODO / 最近讨论
+3. 用户提到的话题在词典里 → 读指向的文档；用户问历史话题（> 14 天前）→ 读 `_INDEX-HISTORY.md`
+4. **不全量加载**：默认不重读，4 trigger 时重读（详 `references/query-behavior.md`）
 
-## § 2 Phase 化协议骨架（记 / 整 / 查）
+## § 2. Phase 化协议骨架
 
 完整细则见 `references/recording-protocol.md`。
 
-### Phase 1：记（流式记录）
+### Phase 1 记 — 触发 / 落点 / 告知 / 铁律 / 质量自检
 
-**触发**：单判据「已被承接」命中（用户明确或隐含确认，含中间决定）→ 立即写 streaming entry，不等用户说"记下"。
+- **触发**：单判据「已被承接」命中 → append streaming entry
+- **落点**：`cadence/streaming/<YYYY-MM-DD>-<topic-slug>.md`
+- **铁律**：append-only（不修改已有 entry；撤回 = append tombstone）
+- **告知**：一行 `📝 已记：<摘要> → <path>`
 
-**落点**：`cadence/streaming/<YYYY-MM-DD>-<topic-slug>.md`（append-only，按主题分文件）
+★ **质量自检 checklist**（扩展 L0 §5c 简版）：
 
-**告知**：写入后一行输出 `📝 已记：<摘要> → <path>#<entry-id>`
+写完 entry 后自检以下 6 项，任一关键缺失 → append 补充段：
 
-**铁律**：append-only，永不编辑已有 entry；撤回追加 tombstone（详见 `references/recording-protocol.md` § 2）
+  ☐ `chosen`        — 选了什么方案？（必填）
+  ☐ `context`       — 决策的前提 / 场景？
+  ☐ `options`       — 讨论中有过哪些候选？
+  ☐ `rejected`      — 为什么不选其他？各自被排除原因？
+  ☐ `dependencies`  — 是否依赖其他 entry（引用 id）？（可选）
+  ☐ `status`        — accepted / pending / superseded？
 
-### Phase 2：整（整合）
+minimum 充分组合：`chosen + context + (options 或 rejected)`
+trap signal：单写"chosen X 已承接"必然下游失血，补充 `context` + `rejected`
 
-**触发**：LLM 自判（话题收尾 / context ≥80% / ADR 结构已全）或 `/cadence-handoff` 兜底扫描。
+完整正反例详见 `references/recording-protocol.md` § 2「信息密度正反例」。
 
-**流程**：派 recall-consolidator subagent（Plan-only）→ 接收 yaml plan → 主 session 执行三步写（Write → Validate → Archive）。Phase 2 是 gate：Validate 未通过绝不进入 Archive。
+### Phase 2 整 — 触发 / 流程
 
-**完整流程与失败降级见** `references/recording-protocol.md` § 3
+**触发**：LLM 自判（话题收尾 / context ≥80% / `_ACTIVE.md` 段达阈值 / handoff 兜底）。
 
-### Phase 3：查（跨 session 检索）
+**流程**：派 `recall-consolidator` subagent（Plan-only）→ 接收 yaml plan → 主 session 三步写（Write → Validate → Archive）。Validate 未通过绝不进入 Archive。
+
+完整流程与失败降级详见 `references/recording-protocol.md` § 3。
+
+### Phase 3 查 — 触发 / 流程 / 硬限
 
 **触发**：用户问历史决策 / 主 session 不确定某历史是否有记录 / 4 trigger 主动重读。
 
-**流程（强制）**：**必须** fork retriever subagent — CC 用 Task tool / Codex 用 `spawn_agent(explorer, message=<XML wrapped recall-retriever prompt>)`（详见 `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/codex-tools.md` § 2）→ 传入 `user_query` + 轻量 context（≤2K tokens）→ 接收 `summary` + `pointers[]`（**总 <500 tokens 硬限**）→ 主 session 向用户呈现。
+**流程（强制）**：**必须** fork retriever subagent — CC 用 Task tool / Codex 用 `spawn_agent(explorer, message=<XML wrapped recall-retriever prompt>)`（详见 `references/harness-adapters.md` § 4）→ 接收 `summary` + `pointers[]`（**总 <500 tokens 硬限**）→ 主 session 呈现。
 
-**铁律 — Codex 形态特别强调**：**禁止主 session 直接 Read / Grep / `Select-String` / `findstr` cadence 档案** 来回答历史检索 query。即使 LLM 判断"本地一两次 grep 就够"、即使 sandbox 拒 `rg` 让人想 fallback 本地工具，**仍必须走 `spawn_agent(explorer)` 路径**。理由：
-1. **context 不膨胀契约** — 主 session 直读会把档案全文吞进上下文；Codex App 默认 ≤400K，长期累积必撞顶
-2. **行为一致性** — CC 与 Codex 形态行为不能分叉，cadence "暗仓库" UX 失守即是协议违例
-3. **sandbox 兼容** — explorer agent 有内置 search 能力，不依赖主 session 的 sandbox policy
+**反例（禁止）**：「刚刚没有 spawn subagent，我只是本地读了几个 cadence 文档和用 PowerShell 搜了一下」—— 协议违例。
 
-**反例（禁止）**：「刚刚没有 spawn subagent，我只是本地读了几个 cadence 文档和用 PowerShell 搜了一下」—— 这就是协议违例。
+完整触发路径与失败降级详见 `references/query-behavior.md` 查阶段节。
 
-**完整触发路径与失败降级见** `references/query-behavior.md` 查阶段节
-
-### recall-analyzer（v0.2.x 保留）
+### recall-analyzer（决策前回忆分析）
 
 5+ 轮 / 多档案 / 冲突风险时 fork `agents/recall-analyzer.md`，产三分类事实（你说的 / 档案有的 / 我推断的）呈现用户。主 session 写，subagent 不写。
 
-## § 3 主 session 工作记忆（v0.4 lifecycle 支持）
+## § 3. 主 session 工作记忆（v0.4 lifecycle）
 
-主 session 在对话上下文中（**不落盘**）维护以下项，仅用于 fork consolidator 时传入：
+主 session 在对话上下文中（**不落盘**）维护：
 
 | 项 | 维护方式 | 用途 |
 |---|---|---|
-| `n_rounds_counter` | 每用户发言 +1 / 触发 lifecycle 时归零 / session 启动初始化为 0（**用户第一发言前**） | 冷启动兜底 trigger（每 N=20 轮触发一次 consolidator） |
-| `recent_user_turns` | FIFO buffer 容量 10 / 每用户发言提炼摘要 ≤50 字（**含**）推入 / **超出时丢最旧** | consolidator 检测"用户言命中"信号（如"X 写完了"） |
+| `n_rounds_counter` | 每用户发言 +1 / 触发归零 / session 启动初始化 0 | 冷启动兜底 trigger（N=20 轮） |
+| `recent_user_turns` | FIFO buffer 容量 10 / 摘要 ≤50 字 / 超出丢最旧 | consolidator 检测"用户言命中"（如"X 写完了"） |
 
-> **说明**：表中 2 项是**主 session 持续维护**的工作记忆。另有 1 项 `git_log_window` 是**按需 collect**（fork consolidator 前用 Bash 收集），见下方"不维护"块。完整 3 项详见 `agents/recall-consolidator.md` § 主 session 工作记忆约定。
+**不维护**（按需 collect）：`git_log_window` — fork consolidator 前用 Bash `git log --since=30.days` 收集；Bash 不可用时传 `[]` fallback。
 
-**不维护**（每次按需 collect）：
-- `git_log_window`：fork consolidator 前用 Bash 跑 `git log --since=30.days ...`
-  - **Fallback**：如 Bash 不可用（permission 限制 / git 不存在等）→ 主 session 传入 `git_log_window: []`，consolidator 仅依赖其他 5 类信号判断（仍可工作，detection 精度略降）
-
-**重启行为**：session 重启 / context reset 时所有工作记忆归零——这是 acceptable trade-off（接受 reset 是 cadence v0.4 设计哲学，源自 Anthropic harness-design 文章的 "ASSUME INTERRUPTION" 原则，详见 design doc § 9 Attribution 节引用）。重启后第一次冷启动 N 轮 trigger 自然回归正常节奏。
+**重启行为**：session 重启 / context reset 时所有工作记忆归零 — ASSUME INTERRUPTION 原则。
 
 完整 fork 输入 schema 详见 `agents/recall-consolidator.md` § 输入 schema。
 
-## § 4 _ACTIVE.md 段独立管理
+## § 4. `_ACTIVE.md` 段独立管理
 
 ### 段独立触发归档（v0.4）
 
-每次写入 `_ACTIVE.md` 某段后，**仅检查该段的条数上限**，不评估其他段：
-
-> **触发动作**：满时派 consolidator 静默判断，仅对该段（不波及其他段）。
+每次写入 `_ACTIVE.md` 某段后，**仅检查该段的条数上限**：
 
 | 段 | 条数上限 | 满时 trigger |
 |---|---|---|
 | 活跃决策 | 8 | 第 9 条到来 |
 | 待决 | 10 | 第 11 条到来 |
 | TODO | 10 | 第 11 条到来 |
-| 最近讨论 | 5 | 第 6 行到来 → 把第 1 行（最旧）移到 `_INDEX-HISTORY.md` |
+| 最近讨论 | 5 | 第 6 行到来 → 最旧移到 `_INDEX-HISTORY.md` |
 
-**总上限 `<1800 tokens`** 作**最终兜底**：日常归档由段独立 trigger 处理，总上限不再是归档主入口。
+**总上限 `<1800 tokens`** 仅作最终兜底。
 
 ### 软硬阈值切换（v0.4）
 
-**软警告（上限 -2 条 / -1 行）**——任一段命中即触发：
-- 各段阈值：活跃决策 6/8、待决 7/10、TODO 7/10、最近讨论 4/5
-- 主 session 静默 fork consolidator（`trigger_reason=section_70`）
-- 接收 yaml plan → 自动 Edit `_ACTIVE.md` + Write archive doc → **一行通知**
+- **软警告（70%）**：阈值 6/8、7/10、7/10、4/5 任一段命中 → 静默 fork consolidator（`trigger_reason=section_70`）→ 自动 Edit + Write archive → 一行通知
+- **100% 硬阈值**（兜底）：任一段达上限 → 主 session 回退询问用户（v0.3 行为，见「补救路径」）
 
-通知格式（按 `docs/design/2026-04-27-cadence-v0.4-design.md` § 5.1.2 完整示例 — 含 commit sha + paths 证据）：
+> ★ **借口反驳 #3**："上限到了再问用户怎么归档" → **错** — 70% 软警告时 consolidator 已经静默处理了，不要等到 100%。
 
-```
-📝 自动整理 N 条 → archive/<doc>.md
-   - D5 (git log 命中已实施 commit 8dc1a91 paths: src/styles/)
-   - D8 (30 天无讨论标 stale)
-   - TODO[#3] (用户言"搞定"已删)
-   不同意可说："撤回归档 D5" / "恢复 TODO[#3]"
-```
-
-**100% 硬阈值**（兜底）：
-- 任一段达上限（活跃决策 8/8 / 待决 10/10 / TODO 10/10 / 最近讨论 5/5）
-- 主 session **回退询问用户**（v0.3 行为，详见下方「补救路径」）
-- 实践中软警告应处理掉绝大多数情况；100% 触发应**罕见**
-
-如观察到 100% 频繁触发 → dogfood 信号告知阈值需调整或 lifecycle 检测信号不全（详见 design doc § 5.1.3 末尾说明）。
+通知格式见 `agents/recall-consolidator.md` § 输出 plan 示例。
 
 ### Undo 协议
 
-用户对自动归档不满意时：
-- "撤回归档 D5" → 主 session 按 plan 中 `undo_hint` 反向操作（Edit `_ACTIVE.md` 还原 + Edit archive 移除条目）
-- 如 plan 已丢失（session 重启 / context reset）→ 主 session 凭 git log 找到对应 archive commit + 反向 Edit
-- 详见 `agents/recall-consolidator.md` § 输出 plan 增量字段 `undo_hint`
+"撤回归档 D5" → 主 session 按 plan 中 `undo_hint` 反向操作；plan 丢失（重启 / reset）→ 凭 git log 找对应 archive commit 反向 Edit。详见 `agents/recall-consolidator.md` § 输出 plan 增量字段。
 
-### 补救路径（各段通用）
+### 补救路径
 
 1. 有对应 discussion 文档 → 追加"已归档决策"节
 2. 无文档但关联主题明确 → 建新 discussion 文档
-3. 孤立决策 → 按 `_CONVENTIONS.md` 的「征询图景」③ 询用户
+3. 孤立决策 → 询问用户（征询图景 ③，见 `references/recording-protocol.md`）
 
-→ 归档完成 → 从 `_ACTIVE.md` 移除最老那条 → 再 Write 新决策 → 📝 告知含"归档了 X → Y"
+→ 归档完成 → 从 `_ACTIVE.md` 移除最老条 → Write 新决策 → 告知含"归档了 X → Y"。
 
-**关键**：永远不让写入失败。所有路径失败时退化为"用户手动决定 + 新决策暂不写入"。
+**关键**：永远不让写入失败。所有路径失败 → 退化为"用户手动决定 + 新决策暂不写入"。
 
 ### 归档策略
 
-- 超过 14 天的讨论记录 → 移到 `_INDEX-HISTORY.md`
-- 超过 30 天的 `_INDEX-HISTORY.md` 记录 → 按月分组移到 `_archive/YYYY-MM.md`
+- 超 14 天讨论记录 → `_INDEX-HISTORY.md`
+- 超 30 天 `_INDEX-HISTORY.md` 记录 → 按月分组移到 `_archive/YYYY-MM.md`
 
-## § 5 记录位置分流
+## § 5. 记录位置分流（完整表）
 
 | 内容类型 | 写入位置 |
 |---|---|
@@ -185,41 +156,30 @@ description: >
 | 详细设计 | `cadence/discussions/<date>-<slug>.md` |
 | Bug/incident | `cadence/discussions/incidents/YYYY-MM-DD-xxx.md` |
 | 讨论记录 | `_ACTIVE.md` 最近讨论（14 天内）/ `_INDEX-HISTORY.md`（14-30 天）|
-| 话题词典 | `_INDEX.md`（不变）|
+| 话题词典 | `_INDEX.md` |
+| 流式 entry | `cadence/streaming/<date>-<slug>.md`（append-only） |
 
-## § 6 借口反驳表
+## § 6. 中途自检
 
-| # | 借口 | 反驳 |
-|---|---|---|
-| 1 | "这个 session 已经在用 brainstorming，project-discuss 应该被覆盖" | brainstorming 管探索过程，project-discuss 管档案落地，**两者职责正交**，必须并行 |
-| 2 | "用户没明确说要记，我先不记" | 单判据"已被承接"的承接对象已扩展（覆盖中间决定）——只要用户有承接信号（如"嗯，先排除 C"），**不用等用户说"记下"** |
-| 3 | "上限到了再问用户怎么归档" | 70% 软警告时 consolidator 已经静默处理了，**不要等到 100%** |
-| 4 | "概念太多，我先简化执行" | 协议**已经简化到 3 Phase**——如果还觉得难记，回头读 SKILL.md，不要凭印象执行 |
-| 5 | "这条决策不重要，先不写 archive" | archive 是暗仓库——但判断"不重要"的标准是是否有承接信号，而非主观感觉；真有噪音风险，整合阶段会处理 |
-
-## § 7 中途自检
-
-本 skill 与 `superpowers:brainstorming` / `writing-plans` / `executing-plans` 等流程 skill **正交、可并行**——调用了流程 skill 不等于可以跳过本 skill。
-
-**Session 进行中若发现本 skill 未被触发**（典型信号：已在讨论/决策但从未加载 `_INDEX.md`、从未记录任何条目），必须：
+Session 进行中若发现本 skill 未触发（典型信号：已在讨论 / 决策但从未加载 `_INDEX.md`、从未记录任何条目），必须：
 
 1. 立即激活本 skill（补调 `Skill("project-discuss")`）
-2. 做追溯征询：列出本 session 已产生的决策点，一次性问用户"要全记 / 选记（指出编号）/ 都别记？"
+2. 追溯征询：列出本 session 已产生的决策点，一次性问"要全记 / 选记（指出编号）/ 都别记？"
 3. 按用户选择补写，汇报时说明"追溯记录"
 
 宁可多自检一次，不要等用户质问。
 
-## § 8 特殊场景处理
+## § 7. 特殊场景处理
 
 ### 查询类
 
 - **"我们讨论到哪了" / "目前确定了什么"** → 读 `_INDEX.md` + `_ACTIVE.md`，综合总结
 - **"XX 确定了吗"** → 查活跃决策 + 历史讨论 + 代码实际状态，综合引用来源
-- **用户问历史决策过程** → 查 `_archive/` 对应月份归档文件
+- **用户问历史决策过程** → 走 Phase 3 retriever 路径（不能主 session 直读）
 
 ### 修改类
 
-- **用户想修改已确定内容** → 确认意图后更新文档 + `_ACTIVE.md`；重大变更归档旧版到 `_archive/`
+- **用户想修改已确定内容** → 确认意图后更新 + `_ACTIVE.md`；重大变更归档旧版到 `_archive/`
 - **开发中发现设计与现实不一致** → 更新设计文档 + `_ACTIVE.md` 活跃决策记录变更原因
 
 ### 导航类
@@ -227,23 +187,56 @@ description: >
 - **讨论主题不在话题词典中** → 用 Grep 搜 `cadence/` 目录找相关文档
 - **用户提供新外部文档** → 整理关键内容到对应 discussion 文档
 
-## § 9 话题词典维护
+## § 8. 话题词典维护 + 路由表
 
-每次写入决策到 `_ACTIVE.md` 后，顺手更新 `_INDEX.md` 底部的「话题词典」：
+每次写决策到 `_ACTIVE.md` 后，顺手更新 `_INDEX.md` 的「话题词典」：
 
 ```markdown
 ## 话题词典
 - 数据库选型 → discussions/05-tech/database.md
 ```
 
-文档数超过 10 时，建议维护 `cadence/discussions/_INDEX-ROUTING.md`（见 `references/query-behavior.md` §「路由表管理」节）。
+**文档数 > 10 时启用** `cadence/discussions/_INDEX-ROUTING.md`：
 
-## § 10 Session 结束提醒（克制版）
+| 话题 / 关键词 | 指向 |
+|---|---|
+| Incident / bug 记录 | `references/recording-protocol.md` § 8 |
+| 文档可信度 L1-L4 | `references/query-behavior.md` § 11 |
+| Harness 适配（CC / OpenCode / Codex） | `references/harness-adapters.md` |
+| 信息密度正反例 / entry schema | `references/recording-protocol.md` § 2 |
+| 查询前置 / 4 trigger 主动重读 | `references/query-behavior.md` |
 
-识别到明显终止信号（「今天到这」「改天」「换个项目」）时，可**一次性、克制地**提醒：
+## § 9. Session 结束提醒（克制版）
+
+识别到明显终止信号（「今天到这」「改天」「换个项目」）时，**一次性、克制地**提醒：
 
 ```
 看起来告一段落了。如果想把本 session 内容保留到档案，可以用 /cadence-handoff。
 ```
 
 **同一 session 只提醒一次**。不基于长度触发。
+
+## § 10. 段独立 trigger 决策流（LLM behavior shaping）
+
+```dot
+digraph section_trigger {
+    "写入_ACTIVE.md某段" [shape=box];
+    "检查该段条数" [shape=diamond];
+    "70%软阈值?" [shape=diamond];
+    "100%硬阈值?" [shape=diamond];
+    "静默fork consolidator" [shape=box];
+    "回退询问用户" [shape=box];
+    "继续讨论" [shape=ellipse];
+
+    "写入_ACTIVE.md某段" -> "检查该段条数";
+    "检查该段条数" -> "70%软阈值?";
+    "70%软阈值?" -> "静默fork consolidator" [label="yes"];
+    "70%软阈值?" -> "100%硬阈值?" [label="no"];
+    "100%硬阈值?" -> "回退询问用户" [label="yes"];
+    "100%硬阈值?" -> "继续讨论" [label="no"];
+    "静默fork consolidator" -> "继续讨论";
+    "回退询问用户" -> "继续讨论";
+}
+```
+
+> Phase 选择流（用户发言 → 记/整/查）见 § 2 描述，不再图形化重复。

@@ -59,7 +59,6 @@
 - 在当前目录建出至少这 3 个文件：
   - `cadence/_INDEX.md`
   - `cadence/_ACTIVE.md`
-  - `cadence/_CONVENTIONS.md`
 - 不报错、不卡住
 
 **失败信号**：
@@ -103,7 +102,7 @@
 - 主 session 给出最终答案 "用 Redis（pointer: streaming/2026-05-06-test.md#entry-001）"，并显式提到调过 retriever subagent
 
 **失败信号**：
-- LLM 不 spawn subagent，直接读文件 → Codex session policy 太保守 / 触发词不够强 → 回 codex-tools.md § 2 加强 spawn 强祈使句
+- LLM 不 spawn subagent，直接读文件 → Codex session policy 太保守 / 触发词不够强 → 回 harness-adapters.md § 3 加强 spawn 强祈使句
 - spawn 报错 `multi_agent` 不可用 → 回前提清单检查 `~/.codex/config.toml`
 - subagent 跑通但回流 token 数远超 500 → 暴露 Codex 的 consolidated output 行为，要重新设计 retriever 输出契约
 

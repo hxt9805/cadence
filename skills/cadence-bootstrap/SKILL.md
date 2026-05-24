@@ -5,100 +5,157 @@ description: Use when starting any conversation in a cadence-managed project (pr
 
 ## Cadence 工作流
 
-本项目使用 cadence 工作流管理讨论和决策档案。
+本项目使用 cadence 工作流管理讨论和决策档案。本文是 L0 协议精炼摘要；细则单一权威源在 `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/`。冲突时以 L2 为准。
 
-### 核心约定
+### § 1. ASSUME INTERRUPTION
 
-- **讨论产物在 `cadence/` 目录**(不在 `docs/`)。`docs/` 保留给项目原有用途(API 文档、用户手册等)。
-- **事项真实状态以 `cadence/_ACTIVE.md` 为准**(活跃决策、待决、TODO、最近讨论)。`_INDEX.md` 是纯索引(项目简述、话题词典、导航),不放变化高频内容。
-- **记录分文件**:
-  - 当前活跃内容(决策、待决、TODO、最近讨论)→ `cadence/_ACTIVE.md`
-  - 索引(项目简述、话题词典、快速导航)→ `cadence/_INDEX.md`
-  - 完整 reasoning / trade-off → `cadence/discussions/NN-主题/`
-- **文档可信度分级**(L1-L4,见 `cadence/_CONVENTIONS.md`):
-  - 事实性问题以代码/配置为准
-  - 意图性问题以 cadence 讨论记录为准
-  - 手写文档(README、docs/)低可信,查询前需代码复核
+context 随时可能被 `/compact` 或重置。**新 session / `/compact` 后必须重做 § 10「session 启动行为」**，不假设"上次读过的还在"。
 
-### 记录行为(v0.4 — 记 / 整 / 查 三阶段)
+### § 2. 目录约定
 
-- **单判据「已被承接」**:用户明确或隐含确认过即记;未命中则不记。v0.2.x 的"未来价值 + 已被承接"双判据在 brainstorming 树状讨论里系统性漏记,v0.3/v0.4 把"未来价值"下移到整 阶段(ε 整合)。
-- **记 阶段(α 流式)**(主 session 直写):命中判据 → append streaming entry 到 `cadence/streaming/<YYYY-MM-DD>-<topic-slug>.md`,一行告知"📝 已记:... → streaming/..."(不索取确认)。
-- **整 阶段(ε 整合)**(`recall-consolidator` subagent,Phase B 启用):阶段性把 streaming 条目整合为 ADR-like `discussions/<date>-<slug>.md`(Plan-only 产出,主 session 写入)。
-- **查 阶段(ρ 检索)**(`recall-retriever` subagent,跨 session):主 session 查历史档案时派 retriever,只读 + <500 tokens 硬限 + 返回 summary + pointers。
-- **决策前回忆分析**(`recall-analyzer`,v0.2.x 保留):明确信号(5+ 轮 / 多档案 / 冲突风险)触发时 fork,产三分类事实呈现用户。
-- **倾向漏记 > 噪音**:档案膨胀比漏记一条成本更高;重要决策会反复出现、届时补记也不迟。
-- 用户信号永远优先:「记一下」必记、「别记」不记、「撤回」追加 tombstone。
-- 详细协议见 `cadence/_CONVENTIONS.md` 的「记录判据(v0.4)」+「三阶段通路关系(v0.4)」+「征询图景」节。
+- 讨论产物在 `cadence/`（不在 `docs/`）。`docs/` 保留给项目原有用途。
+- **事项真实状态以 `cadence/_ACTIVE.md` 为准**（活跃决策、待决、TODO、最近讨论）。
 
-### Codex 形态调度铁律（CC / OpenCode 形态可忽略本节）
+### § 3. 项目档案落点
 
-> 仅适用于 Codex CLI / App / IDE 形态；CC 与 OpenCode 形态都有自动 bootstrap 注入 + 原生 Task tool fork named subagent（plugin 启动时注册），本节无效。OpenCode 形态的工具映射另见 `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/opencode-tools.md`。
+- 决策结论 → `_ACTIVE.md` 活跃决策（一行摘要 + pointer）
+- 待决问题 → `_ACTIVE.md` 待决清单
+- TODO → `_ACTIVE.md` TODO
+- 完整 reasoning / trade-off → `discussions/<date>-<slug>.md`（整 阶段产物）
+- 流式 entry → `streaming/<YYYY-MM-DD>-<topic-slug>.md`(记 阶段，append-only)
 
-Codex 默认 session policy 偏保守，倾向"主 session 本地解决"。**下列三类操作必须走 subagent，禁止主 session 直接读 cadence 档案**：
+### § 4. 单判据「已被承接」
 
-1. **历史检索 query**（"上次 X 我们怎么定的" / "XX 确定了吗" / "之前讨论过 Y 吗"）→ 必须 `spawn_agent(explorer, message=<wrapped recall-retriever prompt>)`
-2. **整合归档**（话题收尾 / context ≥80% / `_ACTIVE.md` 段达阈值 / handoff 兜底）→ 必须 `spawn_agent(worker, message=<wrapped recall-consolidator prompt>)`
-3. **决策前回忆分析**（5+ 轮 / 多档案 / 冲突风险）→ 必须 `spawn_agent(worker, message=<wrapped recall-analyzer prompt>)`
+**承接对象覆盖"结论 OR 中间决定"**：用户明确或隐含确认过即记；未命中则不记。
 
-**为什么是铁律**：
-- Codex App 默认 context ≤400K（CC Opus 4.7 是 1M 的 40%），主 session 直读 cadence 档案累积必撞顶
-- 走 subagent 才能保持 cadence 「暗仓库 + context 不膨胀」契约
-- subagent 与主 session 共享 filesystem 但 conversation 隔离，输出 consolidated（非全文转录）
+**强信号（视为已承接）**：
 
-**spawn 流程详见** `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/codex-tools.md` § 2。
+- 接受性表态（「嗯」「好」「OK」「可以」）
+- 用户基于此推进后续讨论（"那下一步 Y 怎么办" → 说明 X 已是既定前提）
+- 用户在新决策中引用已讨论的 X
 
-**反例（禁止 — 任何一条命中即协议违例）**：
-- ❌ 主 session 直接 `Read cadence/streaming/...md` 或 `cadence/discussions/...md` 来回答历史检索 query
-- ❌ 主 session 用 PowerShell `Select-String` / `findstr` / bash `grep` 搜 cadence/ 内容（即使 sandbox 拒 `rg` 也不能 fallback 本地 grep — 应改用 `spawn_agent(explorer)`）
-- ❌ "刚刚没有 spawn subagent，我只是本地读了几个 cadence 文档" — 这就是协议违例
+**弱信号（不算承接）**：
 
-### 核心命令(用户主动触发)
+- 沉默 / 反问质疑（"确定吗？"还在讨论）
 
-- `/cadence-init` — 初始化或补全 cadence 目录结构
-- `/cadence-handoff` — 整理当前 session 到档案(长 session 换新 session 前用)
-- `/cadence-resume` — 继续之前某次 session 的讨论
+**倾向漏记 > 噪音**：档案膨胀比漏记一条成本更高；重要决策会反复出现、届时补记。
 
-### 不要自动做的事
+完整正反例 + 4 trigger 主动重读详见 L2 `recording-protocol.md`。
 
-- **不自动执行 handoff / resume / init**。这些由用户显式命令触发。
-- 可以在用户明显 session 终止信号(「今天到这」「改天聊」等)时**提醒命令存在**,但不执行,且同一 session 只提醒一次。
-- 新 session 启动时**不主动读取 `cadence/.handoff/` 纸条**。用户需要时自己跑 `/cadence-resume`。
+### § 5. 记录动作（happy path）
 
-### Session 启动时的行为(必须执行)
+命中判据 → append entry 到 `cadence/streaming/<YYYY-MM-DD>-<topic-slug>.md` → 告知一行 `📝 已记：<摘要> → streaming/...`（不索取确认）。
 
-首次看到用户发言**与本项目相关**时(不限于技术或架构。判据见 `_CONVENTIONS.md` 的「修改/扩展类动作前的查询前置」段;**边界模糊时倾向触发**——多触发一次成本低,漏触发成本高。反例:纯外部知识问答(「React hooks 怎么用」)/ 纯学习问题 / 明显闲聊不触发):
+#### § 5a. Recommended entry format (YAML frontmatter + markdown body)
 
-1. **必须触发** `cadence:project-discuss` skill — 即使同时运行**任何其他 skill**(无论是 `superpowers:*` 流程 skill、`cadence:*` 自身的 handoff/resume skill、还是未来引入的任何 skill),本步骤仍需执行。两者**正交并行,不互斥**。
-2. **先列目录再决定读什么**(view directory first):
-   - 第一步: `ls cadence/` 或 Glob `cadence/*.md`,看有哪些文件
-   - 第二步: 按用户发言话题决定读哪个:
-     - 用户问当前状态 / 活跃决策 / 待决 / TODO → 读 `cadence/_ACTIVE.md`
-     - 用户问项目简述 / 话题词典 / 导航 → 读 `cadence/_INDEX.md`
-     - 用户提到具体话题(在文件名 / 词典命中)→ 读对应 `discussions/...md`
-     - 用户问历史(> 14 天前)→ 读 `_INDEX-HISTORY.md`
-     - 用户问 cadence 协议本身(怎么记 / 怎么查)→ 读 `_CONVENTIONS.md`
-   - **兜底**: 首次涉及项目讨论但话题不明确时,至少读 `_INDEX.md` 建立全局上下文(800 tokens 起步可接受;不无脑读 `_ACTIVE.md` 全文)
-3. **ASSUME INTERRUPTION**: context 随时可能被 `/compact` 或重置。新 session 启动 / `/compact` 后**必须重新执行步骤 2**,不假设"上次读过的还在"。
+````markdown
+---
+id: e1
+created: 2026-05-21T12:30:00+08:00
+status: accepted
+chosen: 显式「开始学习」按钮触发
+context: 教学模式 UX 设计访谈中讨论"首次进入"入口形态；担心自动触发误启动 session
+options:
+  - 显式按钮触发
+  - 自动进入教学
+  - 弹窗询问
+rejected:
+  - 自动进入: 用户路过页面就启动 session，缺乏控制感
+  - 弹窗询问: 多一步骤打断流程
+---
 
-**关键区分: 激活 skill ≠ 每句都记**
+## E1: 教学入口用「开始学习」按钮触发
 
-- **Gate 1(激活)**: 项目相关就激活,让 skill 进场监察(**宽**)
-- **Gate 2(写 streaming)**: 激活后,单条发言过"已被承接"判据,命中才记(**严**)
-  - 闲聊 / 脱题 / 脑暴中未被承接的选项 / 反问质疑 → 不记
-  - 已被承接的结论 OR 中间决定 → 记
+用户点击 → 创建 session + AI 发开场白
+后续进入：自动恢复 active session，不重发开场白
+````
 
-**两个 gate 倾向相反但各有道理**:
-- Gate 1: 漏触发 < 多触发(漏触发 = 决策无主落地)
-- Gate 2: 漏记 > 噪音(噪音 = 档案膨胀)
-- 监察要广,记录要精
+> 📌 **非强制** — Markdown 段落格式也合法，**只要信息密度达到 `(chosen + context + options/rejected 三选二)` minimum 组合**。
 
-**核心判据**(遇到清单外的 skill 时靠此判断):`project-discuss` 是**常驻监察层**,管项目档案的加载与落地;其他 skill 是**任务特定层**,管具体动作的流程。两类职责**不重叠**,永远并行。
+#### § 5b. 信息密度对照（一眼看反差）
 
-**反例警告**:调用了 brainstorming 就以为可以跳过 project-discuss,是最常见误判。典型误判场景包括但不限于:
-- brainstorming / writing-plans / executing-plans 已激活 → 误以为档案由它们负责
-- 未来的任何流程 skill 激活时 → 同类误判
+```
+❌ 过简（下游 LLM 看不懂 — resume 失血）：
+   ## E1: 教学入口
+   - 用「开始学习」按钮触发
+   - 已承接
 
-清单外的情况:**任何"Claude 已在做事"的状态都不能替代 project-discuss**。
+✅ 充分（含 chosen + context + rejected，下游可独立理解）：
+   ## E1: 教学入口用「开始学习」按钮触发
+   讨论 UX 入口形态（自动 / 弹窗 / 按钮 3 方案）
+   chosen: 显式按钮 — 用户点击后创建 session
+   rejected: 自动进入（误启动）/ 弹窗（打断流程）
+```
 
-**中途自检**:session 进行中若发现 project-discuss 未被触发(已产生决策但从未记录 / 从未读 `_INDEX.md`),立即补调并做追溯征询,不要等用户质问。
+完整正反例详见 L2 `recording-protocol.md` § 2。
+
+#### § 5c. 写完 entry 立即自检（L0 简版）
+
+`chosen / context / (options 或 rejected)` 三项 minimum 是否齐？任一关键缺失 → **append 补充段**（append-only，不重写已有 entry）。完整 6 项 checklist 见 L1 `project-discuss/SKILL.md` § 2 Phase 1。
+
+> ⚠️ 本 session 未 Read 过 L2 `recording-protocol.md` § 2「信息密度正反例」时，**先 Read 一次后续复用**（不每次 entry 重读 — context 膨胀）。
+
+### § 6. project-discuss 激活规则
+
+session 首条"项目相关"发言 → **必须** `Skill("project-discuss")`。
+
+- ✅ 必激活：「用 Postgres」、「改 Auth」
+- ❌ 不激活：「React hooks 怎么用」（纯技术问答）
+- 🟡 边界模糊 → **倾向触发**（多触发成本低，漏触发代价高）
+- ⚠️ **中途自检**：已产生决策但 `_ACTIVE/streaming` 空 → 立即补调追溯征询
+
+完整正反例详表见 L2 `query-behavior.md`「修改/扩展类查询前置」节。
+
+### § 7. 三阶段（记/整/查）+ subagent 调度
+
+| 阶段 | 谁做 | 何时 | 产物 |
+|---|---|---|---|
+| **记（α 流式）** | 主 session 直写 | 命中判据 | `streaming/<date>-<slug>.md` append entry |
+| **整（ε 整合）** | `recall-consolidator`（Plan-only） | 手动 `/cadence-consolidate` 或 Phase B 自动条件 | `discussions/<date>-<slug>.md` ADR-like doc |
+| **查（ρ 检索）** | `recall-retriever` | 跨 session 历史查询 | summary + pointers（<500 tokens 硬限） |
+
+**决策前回忆分析**（`recall-analyzer`，5+ 轮 / 多档案 / 冲突风险触发）fork 产三分类事实呈现用户。
+
+**铁律**：subagent 只读 / Plan-only / 主 session 唯一写者。**Codex 形态额外要求 `spawn_agent` 强制调度**；OpenCode 形态 Task tool 即可（Codex XML wrapping 模板 + OpenCode 差异详见 L2 `harness-adapters.md`）。
+
+### § 8. Skill 正交并行 + 借口反驳表
+
+`project-discuss` 是**常驻监察层**；其他 skill（`brainstorming` / `writing-plans` / `executing-plans` / `cadence-handoff` / `cadence-resume` / 未来任何 skill）是**任务特定层**，职责不重叠，**永远并行不互斥**。
+
+**最常见误判**：调了 brainstorming 就以为可以跳 project-discuss。
+
+#### 借口反驳表（Mode B 防御：rationalize 不记录的瞬间）
+
+| # | 借口 | 反驳 |
+|---|---|---|
+| 1 | "流程 skill 已激活，project-discuss 可跳过" | **错** — 两者正交，brainstorming 管探索、project-discuss 管档案落地 |
+| 2 | "用户没明确说要记" | **错** — 单判据扩展到"中间决定"，承接信号一命中就记 |
+| 4 | "概念太多，简化执行" | **错** — 已简化到 3 阶段（记/整/查），不要凭印象判断"这次例外" |
+| 5 | "这条不重要，先不写 archive" | **错** — 判断标准是"是否被承接"，不是主观重要性 |
+
+> #3「上限到了再问归档」依赖段管理概念，见 L1 `project-discuss/SKILL.md`。
+
+### § 9. 指向 L1/L2
+
+- **完整协议**：`Skill("project-discuss")`
+- **细则单一权威源**：
+  - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/recording-protocol.md` — 记 阶段细则 + 信息密度正反例 + entry schema + incidents 附录（§8）
+  - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/query-behavior.md` — 查询前置 + 4 trigger 重读 + 文档可信度 L1-L4（§11）
+  - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/harness-adapters.md` — Codex `spawn_agent` + OpenCode 工具映射（v0.5 合并 codex-tools + opencode-tools）
+- **关系契约**：L0 是 L2 细则的**精炼摘要**，不是平行定义。L0/L2 冲突时以 L2 为准。
+
+### § 10. Session 启动时的行为（必做）
+
+首条"项目相关"发言时（判据见 § 6）：
+
+1. **必须触发** `Skill("project-discuss")`（即使同时运行其他 skill，正交并行）。
+2. **先列目录再决定读什么**：
+   - 第一步：`ls cadence/` 或 Glob `cadence/*.md`，看有哪些文件
+   - 第二步：按用户话题决定：
+     - 状态 / 活跃 / 待决 / TODO → 读 `_ACTIVE.md`
+     - 项目简述 / 话题词典 / 导航 → 读 `_INDEX.md`
+     - 具体话题命中 → 读对应 `discussions/...md`
+     - 历史（> 14 天）→ 读 `_INDEX-HISTORY.md`
+     - 协议本身 → 读 L2 `recording-protocol.md` / `query-behavior.md`
+   - **兜底**：话题不明确时至少读 `_INDEX.md`（不无脑读 `_ACTIVE.md` 全文）。
+3. **`/compact` 或新 session 后必须重做步骤 2**（§ 1 ASSUME INTERRUPTION）。

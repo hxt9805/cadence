@@ -108,7 +108,7 @@ source = "https://github.com/hxt9805/cadence.git"
 enabled = true
 ```
 
-> 详细 Codex 形态适配（subagent dispatch 铁律 / sandbox / `$plugin:skill` 触发语法 / context 预算）见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)。
+> 详细 Codex 形态适配（subagent dispatch 铁律 / sandbox / `$plugin:skill` 触发语法 / context 预算）见 [`skills/project-discuss/references/harness-adapters.md`](skills/project-discuss/references/harness-adapters.md)。
 
 ## 安装/降级到历史版本
 
@@ -232,7 +232,7 @@ cadence 在 **Claude Code 与 OpenCode 上为 first-class 形态**（两边都�
 | 插件路径变量 | `${CLAUDE_PLUGIN_ROOT}` 注入 | LLM 按"当前 skill root 的相对路径"自解析 | LLM 按"当前 skill root 的相对路径"自解析 |
 | Slash command | `/cadence-handoff` | `/cadence-handoff`（OpenCode 自动从 skill name 生成） | `$cadence:cadence-handoff` |
 
-Codex 形态下部分行为**依赖 LLM 自适应**（尤其是路径解析与 subagent 调用形式），corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律见 [`skills/project-discuss/references/codex-tools.md`](skills/project-discuss/references/codex-tools.md)；OpenCode 形态的工具映射见 [`skills/project-discuss/references/opencode-tools.md`](skills/project-discuss/references/opencode-tools.md)。
+Codex 形态下部分行为**依赖 LLM 自适应**（尤其是路径解析与 subagent 调用形式），corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律 + OpenCode 工具映射见 [`skills/project-discuss/references/harness-adapters.md`](skills/project-discuss/references/harness-adapters.md)。
 
 ### 操作系统
 

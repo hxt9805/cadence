@@ -1,10 +1,16 @@
-# 记录协议细则（v0.4）
+# 记录协议细则（v0.4 / v0.5 incident 合并）
 
 > project-discuss skill 的记录行为遵循本协议。本文件是 skill 的内部行为细则，
 > 指导 Claude 何时、如何、记录什么。
 >
-> **v0.4 现状**：单判据「已被承接」+ 3 Phase（记 / 整 / 查）+ 共享行为 + 边界。
-> 散装 13 节 → 8 节骨架，瘦身 30%。
+> **v0.4 现状 + v0.5 调整**：单判据「已被承接」+ 3 Phase（记 / 整 / 查）+ 共享行为 + 边界 + 历史脉络 + **incidents 附录**（v0.5 合并自 `incident-handling.md`）。
+> 借口反驳 #1/#2/#4/#5 已上移 L0 `cadence-bootstrap/SKILL.md` §8；#3 上移 L1 `project-discuss/SKILL.md` §4。
+
+## 导航
+
+- §1 记录单判据 / §2 记 阶段（含信息密度正反例 + dual schema）/ §3 整 阶段 / §4 查 阶段
+- §5 共享行为 / §6 边界与禁忌 / §7 历史脉络
+- **§8 Incidents 附录**（bug / 事故 / tricky fix 记录细则，v0.5 合并自 `incident-handling.md`）
 
 ---
 
@@ -144,6 +150,12 @@ tombstone 必有 `ref` + `reason`。订正（错字等）同理：追加新 entr
 ```
 
 详细告知格式见 §5 共享行为。
+
+### Schema 兼容性（v0.5 dual schema）
+
+新 entry 推荐使用 YAML frontmatter + markdown body 格式（详 L0 `cadence-bootstrap/SKILL.md` §5a）；旧 markdown 段落格式（本节上方 `^entry-` 行首形式）**仍然合法**。LLM 是 polyglot reader，两种格式都能被下游消费者（`recall-consolidator` / `recall-retriever`）正确读取。
+
+**dogfood 实证**：信息密度（`chosen` + `context` + `options/rejected`）比 schema 形式更重要。
 
 ### 记阶段绝不做的事
 
@@ -344,19 +356,7 @@ body（建议四节）：`## Context` / `## Decision` / `## Rationale` / `## Alt
 
 ---
 
-## 7. 借口反驳表
-
-| # | 借口 | 反驳 |
-|---|---|---|
-| 1 | "这个 session 已经在用 brainstorming，project-discuss 应该被覆盖" | brainstorming 管探索过程，project-discuss 管档案落地，**两者职责正交**，必须并行 |
-| 2 | "用户没明确说要记，我先不记" | 单判据"已被承接"的承接对象已扩展（覆盖中间决定）——只要用户有承接信号（如"嗯，先排除 C"），**不用等用户说"记下"** |
-| 3 | "上限到了再问用户怎么归档" | 70% 软警告时 consolidator 已经静默处理了，**不要等到 100%** |
-| 4 | "概念太多，我先简化执行" | 协议**已经简化到 3 Phase**——如果还觉得难记，回头读 SKILL.md，不要凭印象执行 |
-| 5 | "这条决策不重要，先不写 archive" | archive 是暗仓库——但判断"不重要"的标准是是否有承接信号，而非主观感觉；真有噪音风险，整合阶段会处理 |
-
----
-
-## 8. 历史脉络
+## 7. 历史脉络
 
 | 版本 | 核心变化 |
 |---|---|
@@ -366,3 +366,102 @@ body（建议四节）：`## Context` / `## Decision` / `## Rationale` / `## Alt
 | **v0.4** | α/ε/ρ → 直白命名（记/整/查）；散装 13 节 → 8 节 Phase 化骨架；承接对象扩展（覆盖中间决定）；强 schema 降建议（status 仍必填）；借口反驳表新增 |
 
 v0.3 design doc（`docs/design/2026-04-21-project-discuss-v0.3-design.md`）保留 α/ε/ρ 原命名作历史脉络，v0.4 起协议层统一使用"记 / 整 / 查"。
+
+---
+
+## 8. Incidents 附录（v0.5 合并自 incident-handling.md）
+
+> Incidents = bug / 事故 / tricky fix 等需要留档的"意外事件"。本节是 §2-§4 三阶段在 incident 场景的特化模板。
+> v0.5 起 `incident-handling.md` 已合并入本附录；主体协议（单判据 / 三阶段 / recall-analyzer）见 §1-§6。
+
+### 触发条件
+
+以下场景下应考虑 incident 记录：
+
+- 用户修复了一个 bug
+- 发生了生产事故 / 回归
+- Performance 问题被解决
+- Tricky 的代码修改（修复逻辑非显而易见）
+- 揭示了既有架构或设计问题的修改
+
+### 单判据 + 承接信号（incident 特化）
+
+按 §1 单判据「已被承接」。incident 场景的承接典型信号：
+
+- 用户说"修好了" / "问题解决了" / "可以了"
+- 用户基于修复推进后续工作（"那我接着做 X"）
+- 修复 commit 已落盘 + 用户转向新话题
+
+**根因未明时**：先记简版 entry，`context` 标"根因待查"，后续讨论继续 append 新 entry 补全（append-only 铁律 — 不修改已有条目）。
+
+**仍可不记的 bug**（即便承接也低价值）：typo / null check 漏了 / 一次性小问题 / git commit message 足够说清楚的。这类筛选由整 阶段（§3）consolidator 处理（可能不产出独立 incident doc，只留 streaming entry）。
+
+### 记 / 整 / 查 在 incident 场景的特化
+
+- **记 阶段（§2）**：写 streaming entry 到 `cadence/streaming/<YYYY-MM-DD>-<incident-slug>.md`，`context` 记症状 + 根因（若已明），`chosen` 记修复方案，`rejected` 记被排除的候选修复（若有）
+- **整 阶段（§3）**：consolidator 判定是否产出独立 incident doc。有留档价值（涉及候选 / trade-off / 改动大 / 揭示架构 / 可能复发）→ `cadence/discussions/incidents/YYYY-MM-DD-简述.md`；低价值（typo / 一次性）→ 不产出独立 doc，只保留 streaming entry
+- **查 阶段（§4）**：用户问"上次类似 incident 怎么处理" → fork `recall-retriever` 检索 `discussions/incidents/` + `_archive/`
+
+架构级 incident 除 incidents/ doc 外，consolidator 可能在 `_ACTIVE.md` 活跃决策追加修正条目。
+
+### Incident doc 模板
+
+#### 完整模板（涉及候选方案 + trade-off / 改动大 / 揭示架构问题）
+
+````markdown
+# [YYYY-MM-DD] 简短描述
+
+## 症状
+用户/系统观察到什么
+
+## 根因
+真正的问题在哪
+
+## 修复
+- 改动的文件：
+  - `src/auth/login.ts:42-58`
+  - `src/middleware/auth.ts:new`
+- 关键逻辑：[1-3 句说明]
+
+## 为什么这么修（非显然时写）
+- 候选方案 A：...
+- 候选方案 B：...
+- 选 A 的理由：...
+
+## 防止复发
+- 需要的测试：
+- 需要的监控：
+- 需要的约定：
+````
+
+#### 摘要模板（单一修复 / 改动小 / 备忘性质）
+
+````markdown
+# [YYYY-MM-DD] 简短描述
+
+## 症状
+...
+
+## 修复
+- 改动文件：...
+- 关键逻辑：...
+````
+
+### 整合后的 archive 维护
+
+整 阶段（§3）产出 incident doc 后，同一两阶段写流程中：
+
+1. 更新 `cadence/_ACTIVE.md` 的「最近讨论」表格，添加一行：
+
+   ```
+   | YYYY-MM-DD | [incident] 简述 | 根因+修复一句话 | incidents/YYYY-MM-DD-xxx.md |
+   ```
+
+2. 架构问题 → 可能在 `_ACTIVE.md`「当前活跃决策」追加修正
+3. 值得让 Claude 今后警示 → 加到 `_INDEX.md` 话题词典
+
+### 不记录的情况
+
+- 用户还在处理中（未被承接 → 等承接）
+- 用户明确说「这个太琐碎，不记」
+- 同一天内已记过类似（**不修改已有 entry**，append 新 entry 注明"关联 ^entry-xx"；整 阶段时合并）
