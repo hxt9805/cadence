@@ -27,3 +27,8 @@ test-cadence-workspace/
 # 档案为开发者本地讨论记录，不公开。其他用户在自己项目用 cadence 时,
 # 按团队规约决定是否 ignore）
 /cadence/
+
+# CC plugin runtime lock dir — 当本仓库被 symlink 成 plugin install path
+# (cache/cadence/cadence/<version>/) 时，CC 会写 per-PID lock 文件 (.in_use/<pid>)
+# 到 plugin root。这些是 runtime artifact，不应进 git。
+.in_use/
