@@ -1,6 +1,6 @@
 {
   "name": "cadence",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Discussion-driven workflow plugin for Claude Code / OpenCode / Codex",
   "type": "module",
   "main": ".opencode/plugin/cadence.js",

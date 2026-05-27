@@ -2,6 +2,44 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.5.0] - 2026-05-24
+
+cadence v0.5 协议三层化改造完成 + dual-channel marketplace 引入。
+
+**核心成果**: 删 `_CONVENTIONS.md` scaffold + cadence-init 大幅简化(230 → 125 行)+ L2 references 合并(6 个 → 3 个)+ 借口反驳表 L0/L1 双层 inline + G 信息密度强化(YAML frontmatter recommended)。
+
+> ⚠️ **跳过 v0.4.x**: v0.4.0 是 dev-local 上的 internal milestone commit (d471060 "prepare v0.4.0"),**从未 tag / release**。v0.5.0 是从 v0.3.1 stable 升级的下一个正式 release,包含 v0.4 + v0.5 全部累积改动。本 CHANGELOG `[0.4.0]` entry 保留作 historical record。
+
+### Added
+- **Dual-channel marketplace** — `cadence@cadence` (stable) + `cadence-preview@cadence` (preview 分支 latest),用户按需选 channel
+- **L2 `harness-adapters.md`** — 合并 codex-tools + opencode-tools 为单文件(6×3 适配表 + Codex 调度铁律 + XML wrapping 模板 + OpenCode 差异 + 调试 tips)
+- **G § 5a/5b/5c (L0)** — YAML frontmatter entry example + 信息密度对照 + 自检 prompt
+- **借口反驳表 inline 到 L0/L1** — Mode B 防御零延迟(#1/#2/#4/#5 在 L0; #3 在 L1 § 4)
+- **`docs/adr/`** — ADR-001 (opt-in via cadence-init) + ADR-002 (L0 inline happy path)
+
+### Changed
+- **`cadence-init/SKILL.md`**: 230 → 125 行 (-46%) — 删 Step 1a.4 / 补全模式 / 已废弃第 4 步; v0.2.x 迁移 inline
+- **`cadence-bootstrap/SKILL.md` (L0)**: 104 → 161 行 — inline 借口反驳表 4 项 + G § 5a/5b/5c
+- **`recording-protocol.md` (L2)**: 368 → 467 行 — §8 incidents 附录(合并 incident-handling.md)+ §2 dual schema 说明
+- **`query-behavior.md` (L2)**: 248 → 322 行 — §11 文档可信度 L1-L4(合并 doc-reliability-protocol.md)
+
+### Removed
+- `cadence-init/scaffolds/_CONVENTIONS.md` (455 行) — bootstrap 注入承担其作用
+- `cadence-init/agents/scaffold-upgrader.md` (123 行) — 迁移逻辑 inline 到主 skill
+- `project-discuss/references/incident-handling.md` (合并到 `recording-protocol.md` § 8)
+- `project-discuss/references/doc-reliability-protocol.md` (合并到 `query-behavior.md` § 11)
+- `project-discuss/references/codex-tools.md` (合并到 `harness-adapters.md`)
+- `project-discuss/references/opencode-tools.md` (合并到 `harness-adapters.md`)
+
+### Migration notes
+- 从 v0.3.x 升级: `/plugin marketplace update cadence` + `/plugin update cadence@cadence` + `/clear`,无需额外操作
+- 协议三层化对用户透明 — happy path 完全 backward compatible
+- 旧 streaming entry (markdown 段落格式) 仍合法,新 entry 推荐 YAML frontmatter
+
+净削减约 908 行(505+ / 1413-) 跨 17 文件。72 pytest 全部通过。
+
+---
+
 ## [0.4.0] - 2026-05-21
 
 正式承认 cadence 协议 v0.4 milestone,**消除 plugin SemVer 与 `recording-protocol.md` 内部协议号自 v0.3.0 起累积的双轨错位**(此前 SKILL.md / agents 跨 5 文件 29 处提及 "v0.4 状态机 / 三阶段 / 单判据",但 CHANGELOG 无 [0.4.0]、git tag 只到 v0.3.1)。
