@@ -14,6 +14,15 @@
         "url": "https://github.com/hxt9805/cadence.git",
         "ref": "v0.4.0"
       }
+    },
+    {
+      "name": "cadence-preview",
+      "description": "预览版(preview 分支 — 新功能,可能不稳定)。Stable 装 cadence@cadence。",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/hxt9805/cadence.git",
+        "ref": "preview"
+      }
     }
   ]
 }
