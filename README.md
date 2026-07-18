@@ -1,6 +1,6 @@
 # cadence
 
-讨论驱动的软件开发工作流插件 — 通过 **记 / 整 / 查** 三阶段记录协议，把 Claude Code / Codex session 的讨论、决策、TODO 自动落地到项目档案中，支持长 session handoff 与跨 session resume。
+讨论驱动的通用项目工作流插件 — 通过 **记 / 整 / 查** 三阶段记录协议，把 AI session 中已承接的决定、约束、待决问题和下一步自动落地到项目档案，支持长 session handoff 与跨 session resume。软件、研究、写作、学习、运营等项目使用同一套核心协议。
 
 > **Claude Code 与 OpenCode 都是 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 通过兼容层支持——SessionStart hook、Task tool、`${CLAUDE_PLUGIN_ROOT}` 在 Codex 没有原生等价,部分体验依赖 LLM 自适应;详见下文 [平台与兼容性](#平台与兼容性)。
 
@@ -8,7 +8,7 @@
 
 cadence 解决一个具体问题：**LLM session 的讨论与决策容易被 `/compact` 或 session 切换冲掉**。它通过一组 skill + hook 让 LLM 自动：
 
-- **记**：在你与 Claude 讨论时，把"已被承接"的决策、TODO、待决问题流式追加到 `cadence/streaming/`
+- **记**：在你与 AI 讨论时，把已承接且形成持久语义增量的决定、TODO、待决问题按 Light / Standard / High 流式追加到 `cadence/streaming/`
 - **整**：阶段性地把 streaming 条目整合为 ADR-like 的讨论文档（`recall-consolidator` subagent）
 - **查**：跨 session 检索历史决策与讨论（`recall-retriever` subagent，<500 tokens 硬限）
 

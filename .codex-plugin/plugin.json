@@ -1,7 +1,7 @@
 {
   "name": "cadence",
   "version": "0.6.0-preview.1",
-  "description": "Discussion-driven dev workflow plugin (Claude Code + OpenCode first-class, Codex CLI compat layer) for recording, consolidating, and retrieving session decisions and TODOs.",
+  "description": "Domain-neutral, discussion-driven project workflow plugin (Claude Code + OpenCode first-class, Codex CLI compat layer) for recording, consolidating, and retrieving session decisions and TODOs.",
   "author": {
     "name": "hxt9805"
   },
@@ -18,7 +18,7 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Cadence",
-    "shortDescription": "Discussion-driven dev workflow for session decisions and TODOs.",
+    "shortDescription": "Domain-neutral project workflow for session decisions and TODOs.",
     "longDescription": "Cadence captures decisions and TODOs from Claude Code and Codex sessions into project archives, with built-in subagent dispatch for context-isolated retrieval and consolidation. It supports compacted contexts, session resets, and cross-session continuity.",
     "developerName": "hxt9805",
     "category": "Productivity",
