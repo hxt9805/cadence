@@ -45,7 +45,7 @@ description: "继续之前某次 session 的讨论上下文(v0.4:Step 6 archive 
 
 `Read cadence/.handoff/<handoff_id>.md`,解析 frontmatter。
 
-### Step 3:识别版本(v0.3 vs legacy v0.2.2)
+### Step 3:识别版本(v0.4 / v0.3 / legacy v0.2.2)
 
 ```python
 # 伪代码(Claude 按逻辑执行,不跑真 python)
@@ -55,25 +55,39 @@ is_legacy = (
 )
 ```
 
-- v0.3 → 走 Step 4a
+- 有 `content_hashes + continuation_refs + fidelity` → v0.4,走 Step 4a
+- 仅有 `content_hashes` → v0.3,走 Step 4a 的兼容路径
 - legacy v0.2.2 → 走 Step 4b
 
 **判据优先级**:字段判据为主(覆盖 99% 场景);若字段判据**两字段都不存在或都存在**(corner case,如文件损坏或迁移中)→ 调用 `python ${CLAUDE_PLUGIN_ROOT}/skills/cadence-handoff/scripts/validate_handoff.py <path>`(macOS / Linux 把 `python` 换成 `python3`)兜底:v0.3 合法则走 4a;抛 "legacy v0.2.2 detected" 则走 4b;其他错误 → 告知用户"handoff 文件格式无法识别"。
 
-### Step 4a:v0.3 — content_hashes 对比
+### Step 4a:v0.3/v0.4 — hashes 对比 + canonical 恢复
 
 1. 用 cadence-handoff Step 3 同方法(`git hash-object` 首选,平台 fallback 见 `skills/cadence-handoff/SKILL.md` Step 3)计算**当前** `cadence/_INDEX.md` + `_ACTIVE.md` 的 sha1
-2. 与 handoff frontmatter `content_hashes` 对比:
+2. v0.4:逐个验证 `continuation_refs.path` 存在,计算当前 sha1 并与快照对比
+3. 读取所有校验通过的 continuation discussion,不得只展示路径而不读正文
+4. 仅依赖 handoff + 已读 cadence 档案回答冷启动六问:
+   - 已决定什么?
+   - 为什么?
+   - 否决过什么?
+   - 哪些约束不能破坏?
+   - 哪些问题仍未决定?
+   - 下一步是什么?
+5. 对比所有 hashes:
 
-   **两侧均 match** → 档案未变,走简洁视图:
+   **索引 + canonical 均 match** → 档案未变,走简洁视图:
    ```
    📍 上次讨论到:<cursor.last_discussed>
    📋 待定:<cursor.pending_questions>
    ➡️ 下一步:<cursor.next_step>
-   注:档案自 handoff 以来无变化,可直接接续。
+   📚 已恢复:<continuation_refs paths>
+   注:档案自 handoff 以来无变化,且 canonical 上下文已读取,可直接接续。
    ```
 
-   **至少一侧 mismatch** → 档案已变,走 Step 5(派 retriever)
+   **至少一侧 mismatch / ref 缺失** → 档案已变或不完整,走 Step 5(派 retriever)
+
+6. `fidelity.status: partial` 时,在简洁视图中逐条展示 `uncovered`;禁止把推断补成既定事实。
+   v0.3 没有 fidelity 字段时标注"legacy-unverified",不声称做过本次保真扫描。
 
 ### Step 4b:legacy v0.2.2 — mtime fallback
 
@@ -91,6 +105,7 @@ v0.2.2 老 handoff 无 content_hashes。回退 mtime 判据:
   - `user_query`:基于 handoff 的 `cursor.last_discussed` + `pending_questions` 拼接
   - `current_session_context`:轻量,说明"新 session 刚启动,需了解 handoff 后档案新变化"
 - 接收 <500 tokens 输出(summary + pointers + confidence)
+- v0.4 continuation ref mismatch 时,把 mismatch path 作为检索锚点并优先读取替代 canonical
 - 展示:
   ```
   📍 上次讨论到:<cursor.last_discussed>
@@ -104,11 +119,14 @@ v0.2.2 老 handoff 无 content_hashes。回退 mtime 判据:
   - <pointers[0].path>:<pointers[0].relevance>
   ...
   ```
-- 用户决定是否 `Read` 具体 pointer
+- 主 agent 自动 `Read` 与冷启动六问直接相关的 pointer;弱相关 pointer 只展示路径
 
 ### Step 6: Archive cleanup（v0.4 新增 / B1 修复）
 
-resume 成功后（Step 4a/4b 展示给用户后），**立即执行** archive cleanup，防止 resumed 条目永远停留在 `cadence/.handoff/index.json`（B1 bug）。
+resume 成功后（已读取必要 canonical 或已精确报告 partial 缺口,并向用户展示恢复结果），
+**立即执行** archive cleanup，防止 resumed 条目永远停留在
+`cadence/.handoff/index.json`（B1 bug）。若 ref/hash 校验失败且 retriever 也失败,本次
+不算成功恢复,不得 cleanup,以便修复后重试。
 
 #### 调用方式
 
@@ -179,6 +197,8 @@ helper 打印每步结果，`exit 0`（即使部分 skip / fail）。
 - Step 2 handoff 文件缺失 → 告知用户"handoff 文件已丢失 / 被手动删除",展示 index.json 中其他候选
 - Step 4a sha1 计算失败 → 回退走 Step 4b mtime 判据 + 告知用户"sha1 不可用,使用 mtime 粗判"
 - Step 5 retriever 失败 → 告知用户 + 降级为"展示 handoff body,由用户自行决定是否深入"
+- continuation ref 缺失或 hash mismatch → 不使用旧正文冒充当前真相;走 retriever 查替代文档
+- 冷启动六问无法回答 → 显示具体缺项,标记恢复为 partial,不重新拍板
 
 ## `handoff-resume-auditor` 废弃
 
@@ -187,6 +207,7 @@ v0.2.2 的 `agents/handoff-resume-auditor.md`(对比 `_INDEX`/`_ACTIVE` 差异)�
 
 ## 版本兼容
 
-- v0.3 handoff:content_hashes 分支(4a → 5)
+- v0.4 handoff:content_hashes + continuation_refs + fidelity(4a → 5)
+- v0.3 handoff:content_hashes 兼容分支(4a → 5,标 legacy-unverified)
 - v0.2.2 legacy:mtime fallback(4b)
 - 不强制迁移老 handoff 文件

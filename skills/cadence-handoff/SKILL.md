@@ -12,9 +12,12 @@ v0.3 前 handoff 承担"决策/待决/约束/TODO/incidents"五类提取 + 9 步
 v0.3/v0.4 后记/整/查三阶段覆盖这些职责:
 - 记 阶段（α 流式）记录已承载"讨论内容持久化"(五类提取不再需要)
 - `recall-retriever` 查 阶段（ρ）<500 tokens 契约负责跨 session 检索(注入历史不再需要)
-- 整 阶段（ε 整合）触发(含 handoff 兜底)自动收敛零散(补漏不再需要)
+- 整 阶段（ε 整合）触发(含 handoff 兜底)自动收敛零散
+- handoff 写书签前执行 fidelity sweep,补齐"对话已承接但尚未落档"的稳定语义
 
-**新本质**:短小书签——提供"游标"(讨论到哪 / 卡在哪)和"soft context"(语气、未明说的注意事项)。体量目标 15-30 行。
+**新本质**:短小书签——提供"游标"(讨论到哪 / 卡在哪)、canonical 指针和
+"soft context"(语气、未明说的注意事项)。详细内容不复制进 handoff,体量目标
+15-30 行。
 
 ## 路径约定
 
@@ -22,18 +25,24 @@ v0.3/v0.4 后记/整/查三阶段覆盖这些职责:
 
 ## 5 步流程(主 agent 执行,不派 writer subagent)
 
-### Step 1:扫 active streaming → 触发整 阶段（ε 整合）兜底
+### Step 1:fidelity sweep + 整 阶段（ε 整合）兜底
 
 ```
-Glob cadence/streaming/*.md
+对账当前 session 已承接的持久语义与本 session 新增 streaming entry
+  → 范围明确的漏记:按 project-discuss 保真规则自动 append,告知用户
+  → 指向不明或有多个候选方案:询问用户,不得猜测
+  → Glob cadence/streaming/*.md
   → 读每个文件 front-matter
-  → 对每个 status: active 文件,检查 entry 数与时间新鲜度
-  → 成熟主题 → 派 recall-consolidator subagent(trigger_reason: handoff_sweep)
+  → 对每个 status: active 文件,检查 entry 保真等级、收尾语义、数量与时间新鲜度
+  → High / 显式收尾 / 成熟主题 → 派 recall-consolidator(trigger_reason: handoff_sweep)
   → 接收 plan → 走两阶段写(复用 project-discuss 整 阶段流程)
+  → 验证 source_entries 与 coverage 完全对应,否则保持 active
   → 把整合产出的 discussion doc 路径收集到 `produced[]`
 ```
 
-若所有 streaming 都刚起步(entry <2 条 / 距今 <10 分钟)→ 跳过,`consolidation.triggered: false`。
+只有**不是当前 continuation、且未收尾的 Light/Standard** 主题可因
+`entry <2 条 / 距今 <10 分钟` 跳过。当前 continuation、High 或用户已明确收尾的
+主题即使只有一条 entry 也必须尝试整合,确保新 handoff 至少有一个 canonical ref。
 
 **Partial success 语义**:若至少一个主题整合成功 → `consolidation.triggered: true`,`produced[]` 仅含成功项;全部失败或跳过 → `triggered: false`,`produced: []`。
 
@@ -47,7 +56,7 @@ Glob cadence/streaming/*.md
 - `soft_context.tone`:对话语气(如"紧凑" / "探索中")(可空)
 - `soft_context.notes`:特殊注意事项,0-N 条(可空)
 
-### Step 3:计算 content_hashes(I-1)
+### Step 3:计算 content_hashes + continuation_refs
 
 使用 `git hash-object -w --stdin` 跨平台计算(**跨平台首选**,cadence 项目已依赖 git):
 
@@ -65,12 +74,21 @@ ACTIVE_HASH=$(git hash-object cadence/_ACTIVE.md)
 
 结果:40 字符小写 hex;不匹配 `^[0-9a-f]{40}$` → 写入前报错停止。
 
+从 Step 1 成功整合且与 `cursor.last_discussed` / `next_step` 直接相关的 discussion 中选
+1-3 个 `continuation_refs`;逐个用同一方法计算 sha1。不要为了凑数量加入弱相关文档。
+
+生成 fidelity 状态:
+
+- `complete`:当前 session 所有已承接持久语义已落 streaming,High/收尾主题已完成 coverage
+- `partial`:仍有未覆盖项;逐条写入 `uncovered`,不得笼统写"可能有遗漏"
+
 ### Step 4:写 `cadence/.handoff/<handoff_id>.md` snapshot
 
 按 design doc § 12.2 schema:
 
 ```yaml
 ---
+schema_version: "v0.4"
 handoff_id: <ISO 时间戳无冒号,如 20260423T180000+0800>
 created_at: <ISO-8601 TZ>
 topic: <一句话主题>
@@ -80,6 +98,9 @@ content_hashes:
 cursor: { last_discussed, pending_questions, next_step }
 soft_context: { tone, notes }
 consolidation: { triggered, produced }
+continuation_refs:
+  - { path: discussions/<canonical>.md, sha1: <sha1> }
+fidelity: { status: complete | partial, uncovered: [] }
 ---
 
 # Handoff: <topic>
@@ -94,7 +115,8 @@ consolidation: { triggered, produced }
 streaming 中若干条已整合为 <produced[0]>,详见该 doc
 ```
 
-**体量目标**:15-30 行(frontmatter + body)。超 30 行 → 压缩 cursor 为单句、soft_context.notes 限 ≤3 条。
+**体量目标**:15-30 行(frontmatter + body)。超 30 行 → 压缩 cursor 为单句、
+soft_context.notes 限 ≤3 条、continuation_refs 限 1-3 条;不得删除 fidelity 缺口。
 
 **写入前校验**:`python ${CLAUDE_PLUGIN_ROOT}/skills/cadence-handoff/scripts/validate_handoff.py cadence/.handoff/<handoff_id>.md`(macOS / Linux 把 `python` 换成 `python3`)必须通过;不通过则停止写入 + 告知用户。
 
@@ -105,6 +127,7 @@ streaming 中若干条已整合为 <produced[0]>,详见该 doc
 ## 失败处理
 
 - Step 1 consolidator 失败 → 日志告知,跳过未能整合的 streaming(保持 active),继续 Step 2-5
+- Step 1 fidelity sweep 仍有缺口 → 写 `fidelity.status: partial` + 精确 `uncovered`,不伪装 complete
 - Step 3 sha1 计算失败 → 停止,告知用户检查环境
 - Step 4 schema 校验失败 → 停止,不更新 index.json
 - 不引入 partial recovery(同 Phase B § 16.3)
@@ -115,4 +138,6 @@ streaming 中若干条已整合为 <produced[0]>,详见该 doc
 
 ## 版本兼容
 
-v0.2.2 老 handoff 文件(含 `item_counts` / 五类 entries)**不做迁移**;由 cadence-resume 识别后走 legacy 分支(`is_legacy_v22()` → mtime fallback)。
+- v0.4:content_hashes + continuation_refs + fidelity
+- v0.3:仅 content_hashes,继续合法
+- v0.2.2 老 handoff(含 `item_counts` / 五类 entries)**不做迁移**;resume 走 legacy 分支

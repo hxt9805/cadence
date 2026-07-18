@@ -45,3 +45,43 @@ def test_cursor_last_discussed_required():
     del doc.front_matter["cursor"]["last_discussed"]
     with pytest.raises(ValueError, match="last_discussed"):
         validate_handoff_v03(doc)
+
+
+def test_v04_continuation_refs_and_fidelity_pass():
+    doc = _load("handoff_v04_valid.md")
+    validate_handoff_v03(doc)
+
+
+def test_continuation_ref_sha1_must_be_valid():
+    doc = _load("handoff_v04_valid.md")
+    doc.front_matter["continuation_refs"][0]["sha1"] = "bad"
+    with pytest.raises(ValueError, match="continuation_refs.*sha1"):
+        validate_handoff_v03(doc)
+
+
+def test_continuation_ref_must_target_discussion():
+    doc = _load("handoff_v04_valid.md")
+    doc.front_matter["continuation_refs"][0]["path"] = "streaming/topic.md"
+    with pytest.raises(ValueError, match="continuation_refs.*discussions"):
+        validate_handoff_v03(doc)
+
+
+def test_complete_fidelity_requires_empty_uncovered():
+    doc = _load("handoff_v04_valid.md")
+    doc.front_matter["fidelity"]["uncovered"] = ["missing decision"]
+    with pytest.raises(ValueError, match="complete.*uncovered"):
+        validate_handoff_v03(doc)
+
+
+def test_partial_fidelity_requires_uncovered_items():
+    doc = _load("handoff_v04_partial.md")
+    del doc.front_matter["fidelity"]["uncovered"]
+    with pytest.raises(ValueError, match="partial.*uncovered"):
+        validate_handoff_v03(doc)
+
+
+def test_continuation_refs_are_limited_to_three():
+    doc = _load("handoff_v04_valid.md")
+    doc.front_matter["continuation_refs"] *= 4
+    with pytest.raises(ValueError, match="1-3"):
+        validate_handoff_v03(doc)
