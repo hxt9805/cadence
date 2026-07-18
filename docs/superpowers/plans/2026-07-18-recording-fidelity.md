@@ -33,7 +33,7 @@
 - Consumes: legacy `^entry-...` blocks and YAML fenced entry blocks embedded after streaming file frontmatter.
 - Produces: `Entry.detail_profile`, `Entry.rationale`, `Entry.semantic_slots`, `Entry.not_applicable`, `Entry.provenance`, plus `validate_entry_with_warnings(entry) -> list[str]`.
 
-- [ ] **Step 1: Write failing dual-schema and profile tests**
+- [x] **Step 1: Write failing dual-schema and profile tests**
 
 Add tests proving:
 
@@ -56,7 +56,7 @@ def test_non_software_high_decision_uses_same_model():
     assert "external_commitments" in entry.semantic_slots
 ```
 
-- [ ] **Step 2: Run the focused tests and confirm RED**
+- [x] **Step 2: Run the focused tests and confirm RED**
 
 Run:
 
@@ -66,7 +66,7 @@ py -3.13 -m pytest tests/schema/test_streaming_entry.py -q
 
 Expected: failures because YAML entries and fidelity fields are not parsed.
 
-- [ ] **Step 3: Implement the normalized entry model**
+- [x] **Step 3: Implement the normalized entry model**
 
 Extend `Entry` with:
 
@@ -80,7 +80,7 @@ provenance: dict = field(default_factory=dict)
 
 Parse both surface formats into `Entry`. Keep `_finalize` strict for IDs, timestamps, `chosen`, and High `context/rationale`; return warnings for Standard omissions and vague numbered choices.
 
-- [ ] **Step 4: Run focused and full schema tests**
+- [x] **Step 4: Run focused and full schema tests**
 
 Run:
 
@@ -91,7 +91,7 @@ py -3.13 -m pytest tests/schema -q
 
 Expected: all pass.
 
-- [ ] **Step 5: Commit Task 1**
+- [x] **Step 5: Commit Task 1**
 
 ```powershell
 git add tests/schema/validate_streaming.py tests/schema/test_streaming_entry.py tests/schema/fixtures
@@ -111,7 +111,7 @@ git commit -m "feat: validate domain-neutral decision fidelity"
 - Consumes: normalized streaming entry IDs and the existing plan schema.
 - Produces: `canonical_action`, `coverage[]`, expanded lifecycle triggers, and archive gating.
 
-- [ ] **Step 1: Write failing merge, coverage, and trigger tests**
+- [x] **Step 1: Write failing merge, coverage, and trigger tests**
 
 Add tests proving:
 
@@ -135,7 +135,7 @@ def test_documented_triggers_are_accepted(trigger):
     validate_plan(plan)
 ```
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 Run:
 
@@ -145,7 +145,7 @@ py -3.13 -m pytest tests/schema/test_consolidator_plan.py -q
 
 Expected: new trigger and coverage tests fail.
 
-- [ ] **Step 3: Implement consolidation plan validation**
+- [x] **Step 3: Implement consolidation plan validation**
 
 Add:
 
@@ -158,7 +158,7 @@ VALID_COVERAGE_DISPOSITIONS = {
 
 Require non-empty coverage when `streaming_file_updates.front_matter_update.status == "archived"`. Validate source IDs, disposition, section for incorporated entries, and `superseded_by` for superseded entries.
 
-- [ ] **Step 4: Update consolidator instructions**
+- [x] **Step 4: Update consolidator instructions**
 
 Require the plan-only agent to:
 
@@ -168,7 +168,7 @@ Require the plan-only agent to:
 - consolidate a single High entry or explicitly closed topic;
 - use `merge_into_existing` when a canonical discussion already exists.
 
-- [ ] **Step 5: Run focused and full tests**
+- [x] **Step 5: Run focused and full tests**
 
 Run:
 
@@ -179,7 +179,7 @@ py -3.13 -m pytest tests/schema -q
 
 Expected: all pass.
 
-- [ ] **Step 6: Commit Task 2**
+- [x] **Step 6: Commit Task 2**
 
 ```powershell
 git add tests/schema/validate_consolidator_plan.py tests/schema/test_consolidator_plan.py tests/schema/fixtures skills/project-discuss/agents/recall-consolidator.md
@@ -200,7 +200,7 @@ git commit -m "feat: require canonical coverage before archive"
 - Consumes: canonical discussion paths and SHA-1 values.
 - Produces: optional backward-compatible `continuation_refs` and `fidelity` fields.
 
-- [ ] **Step 1: Write failing v0.4 handoff tests**
+- [x] **Step 1: Write failing v0.4 handoff tests**
 
 Add tests proving:
 
@@ -224,7 +224,7 @@ def test_partial_fidelity_requires_uncovered_items():
         validate_handoff_v03(doc)
 ```
 
-- [ ] **Step 2: Run handoff tests and confirm RED**
+- [x] **Step 2: Run handoff tests and confirm RED**
 
 Run:
 
@@ -234,7 +234,7 @@ py -3.13 -m pytest tests/schema/test_handoff_v03.py -q
 
 Expected: v0.4 fields are not validated.
 
-- [ ] **Step 3: Implement backward-compatible validation**
+- [x] **Step 3: Implement backward-compatible validation**
 
 Allow existing v0.3 handoffs unchanged. When new fields exist:
 
@@ -243,11 +243,11 @@ Allow existing v0.3 handoffs unchanged. When new fields exist:
 - require fidelity status in `complete|partial`;
 - require empty uncovered for complete and non-empty uncovered for partial.
 
-- [ ] **Step 4: Update handoff and resume workflow**
+- [x] **Step 4: Update handoff and resume workflow**
 
 Replace “补漏不再需要” with a fidelity sweep. Keep the 15–30 line target, add canonical refs, require High/closed topics to bypass the `<2 entries / <10 minutes` skip, and make resume read and verify refs before claiming context restored.
 
-- [ ] **Step 5: Run handoff, cleanup, and full schema tests**
+- [x] **Step 5: Run handoff, cleanup, and full schema tests**
 
 Run:
 
@@ -258,7 +258,7 @@ py -3.13 -m pytest tests/schema -q
 
 Expected: all pass.
 
-- [ ] **Step 6: Commit Task 3**
+- [x] **Step 6: Commit Task 3**
 
 ```powershell
 git add tests/schema/validate_handoff.py tests/schema/test_handoff_v03.py tests/schema/fixtures skills/cadence-handoff/SKILL.md skills/cadence-resume/SKILL.md
@@ -278,7 +278,7 @@ git commit -m "feat: resume from verified canonical pointers"
 - Consumes: the DecisionRecord and profile semantics from Task 1.
 - Produces: a shared behavior contract injected by Claude Code and discoverable by OpenCode/Codex.
 
-- [ ] **Step 1: Write failing cross-domain contract tests**
+- [x] **Step 1: Write failing cross-domain contract tests**
 
 Add a test that reads the skill files and asserts:
 
@@ -300,7 +300,7 @@ def test_acceptance_shorthand_captures_the_preceding_proposal():
     assert "不是承接短句本身" in PROJECT_DISCUSS
 ```
 
-- [ ] **Step 2: Run the contract test and confirm RED**
+- [x] **Step 2: Run the contract test and confirm RED**
 
 Run:
 
@@ -310,7 +310,7 @@ py -3.13 -m pytest tests/test_recording_fidelity_contract.py -q
 
 Expected: missing reference and contract markers fail.
 
-- [ ] **Step 3: Add the focused recording-fidelity reference**
+- [x] **Step 3: Add the focused recording-fidelity reference**
 
 Write a concise reference containing:
 
@@ -322,13 +322,13 @@ Write a concise reference containing:
 - positive examples from software, research, writing, learning, and operations;
 - common mistakes and a cold-start checklist.
 
-- [ ] **Step 4: Patch L0/L1/L2 without duplicating the reference**
+- [x] **Step 4: Patch L0/L1/L2 without duplicating the reference**
 
 - Bootstrap: keep only the three-stage core and a compact profile table.
 - Project-discuss: require proposal backtracking, semantic delta extraction, automatic bounded repair, and conditional reading of the fidelity reference.
 - Recording protocol: replace the universal minimum with baseline plus profile-aware fidelity and point to the focused reference.
 
-- [ ] **Step 5: Verify contract, hook injection, and all tests**
+- [x] **Step 5: Verify contract, hook injection, and all tests**
 
 Run:
 
@@ -339,12 +339,27 @@ py -3.13 -m pytest -q
 
 Expected: all pass.
 
-- [ ] **Step 6: Commit Task 4**
+- [x] **Step 6: Commit Task 4**
 
 ```powershell
 git add skills tests/test_recording_fidelity_contract.py
 git commit -m "feat: record accepted decisions with adaptive fidelity"
 ```
+
+### Review-driven extension: domain-neutral project discovery
+
+Self-review found two domain locks outside the original recording path: `cadence-init` treated code
+signatures as the only evidence of an existing project, and query reliability treated code as
+universally authoritative. The extension:
+
+- makes any meaningful project material count as an existing project;
+- performs generic discovery before selecting optional software / research / writing / learning /
+  operations adapters;
+- ranks sources by question relevance, declared authority, directness, and freshness;
+- keeps software-specific scan fields as backward-compatible optional fields;
+- updates public plugin descriptions to state the domain-neutral contract.
+
+Implemented and committed as `c54591e feat: generalize cadence project discovery`.
 
 ### Task 5: Final consistency and release-readiness verification
 
@@ -360,7 +375,7 @@ git commit -m "feat: record accepted decisions with adaptive fidelity"
 - Consumes: all prior tasks.
 - Produces: verified shared behavior across the plugin's supported harnesses.
 
-- [ ] **Step 1: Inspect runtime loading paths**
+- [x] **Step 1: Inspect runtime loading paths**
 
 Verify that:
 
@@ -369,13 +384,13 @@ Verify that:
 - Codex discovers root skill paths from `.codex-plugin/plugin.json`;
 - no generated marketplace copy needs a separate manual patch.
 
-- [ ] **Step 2: Add runtime regression assertions**
+- [x] **Step 2: Add runtime regression assertions**
 
 Write failing tests that prove all three harnesses reference the shared root skill and that the Claude
 hook injects the three-stage recording marker. Do not create duplicate runtime implementations when
 the shared source already supplies the behavior.
 
-- [ ] **Step 3: Run complete verification**
+- [x] **Step 3: Run complete verification**
 
 Run:
 
@@ -387,11 +402,29 @@ git status --short
 
 Expected: all tests pass, no whitespace errors, and only intentional files differ.
 
-- [ ] **Step 4: Re-read the design acceptance criteria**
+- [x] **Step 4: Re-read the design acceptance criteria**
 
 Confirm every design criterion maps to code, skill text, validator behavior, or a test. Record any deliberate deferral in the final report rather than silently omitting it.
 
-- [ ] **Step 5: Commit final consistency changes**
+Acceptance mapping:
+
+| Criterion | Evidence |
+|---|---|
+| Automatic adequate recording | shorthand backtracking + bounded repair in project-discuss; fidelity sweep in handoff |
+| Light stays compact / High is recoverable | profile rules + validator warnings/errors + cross-domain fixtures |
+| Same model outside software | research/writing/learning/operations fixtures and domain-neutral discovery contract |
+| Every archived entry covered | v0.5 consolidator `source_entries` / `coverage` validator tests |
+| Handoff remains 15–30 lines | handoff compact-body contract test; detail stays in `continuation_refs` |
+| Resume passes cold-start six questions | canonical ref/hash verification + resume contract test |
+| Both streaming schemas remain valid | legacy and YAML parser tests |
+| Three runtimes use shared rules | Claude hook, OpenCode source path, Codex manifest contract tests |
+| Secrets/raw logs/unaccepted exploration excluded | recording-fidelity sensitive-data and acceptance rules |
+
+Deliberate compatibility choice: missing Light/Standard context remains a warning rather than a hard
+error so historical entries continue to parse. High omissions and archive coverage gaps remain hard
+errors.
+
+- [x] **Step 5: Commit final consistency changes**
 
 ```powershell
 git add .

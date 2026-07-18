@@ -14,6 +14,10 @@ RECORDING_PROTOCOL = (
 FIDELITY_PATH = (
     ROOT / "skills/project-discuss/references/recording-fidelity.md"
 )
+HANDOFF = (ROOT / "skills/cadence-handoff/SKILL.md").read_text(
+    encoding="utf-8"
+)
+RESUME = (ROOT / "skills/cadence-resume/SKILL.md").read_text(encoding="utf-8")
 
 
 def _fidelity_reference() -> str:
@@ -85,3 +89,18 @@ def test_reference_contains_cold_start_recovery_questions():
         "下一步是什么",
     ]:
         assert question in reference
+
+
+def test_handoff_stays_compact_while_resume_reads_canonical_context():
+    assert "15-30 行" in HANDOFF
+    assert "continuation_refs" in HANDOFF
+    assert "读取所有校验通过的 continuation discussion" in RESUME
+    for question in [
+        "已决定什么?",
+        "为什么?",
+        "否决过什么?",
+        "哪些约束不能破坏?",
+        "哪些问题仍未决定?",
+        "下一步是什么?",
+    ]:
+        assert question in RESUME

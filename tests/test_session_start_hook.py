@@ -105,6 +105,17 @@ def test_chinese_characters_round_trip_cleanly(tmp_path):
     assert '讨论' in ctx, 'common Chinese term missing/corrupted'
 
 
+def test_adaptive_recording_markers_are_injected(tmp_path):
+    """The live Claude bootstrap must carry the three separate decisions."""
+    pr = _make_plugin_root(tmp_path)
+    result = _run_hook(pr)
+    data = json.loads(result.stdout.decode('utf-8'))
+    ctx = data['hookSpecificOutput']['additionalContext']
+    assert '承接决定是否记录' in ctx
+    assert '持久语义增量决定是否新建 entry' in ctx
+    assert '影响等级决定记录多详细' in ctx
+
+
 def test_no_lone_surrogates_in_additional_context(tmp_path):
     """REGRESSION GUARD: Anthropic API rejects JSON containing lone Unicode
     surrogates (U+D800-U+DFFF). Python's surrogateescape error handler can

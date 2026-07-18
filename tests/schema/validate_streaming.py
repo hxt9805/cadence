@@ -321,6 +321,10 @@ def validate_entry_with_warnings(e: Entry) -> List[str]:
     """Return profile-aware soft warnings after hard validation succeeds."""
     _finalize(e)
     warnings: List[str] = []
+    if e.detail_profile in {"light", "standard"} and not e.context:
+        warnings.append(
+            f"{e.entry_id}: {e.detail_profile} profile missing context"
+        )
     if e.detail_profile == "standard" and not e.rationale:
         warnings.append(f"{e.entry_id}: standard profile missing rationale")
     if e.chosen and VAGUE_NUMBERED_CHOICE.fullmatch(e.chosen.strip()):

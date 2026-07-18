@@ -76,6 +76,38 @@ def test_non_software_high_decision_uses_same_model():
     assert "frontend" not in entry.semantic_slots
 
 
+def test_cross_domain_profiles_share_the_same_normalized_model():
+    entries = parse_entries(_load("streaming_cross_domain_profiles.md"))
+    assert [(entry.summary, entry.detail_profile) for entry in entries] == [
+        ("写作章节结构", "standard"),
+        ("学习中断恢复", "high"),
+        ("运营预算与中止", "high"),
+        ("局部文案调整", "light"),
+    ]
+    assert entries[0].rationale
+    assert "sequence_and_dependencies" in entries[1].semantic_slots
+    assert "resources_and_limits" in entries[2].semantic_slots
+    assert entries[3].context
+
+
+def test_light_and_standard_missing_context_return_fidelity_warnings():
+    light = parse_entries(_load("streaming_yaml_valid.md"))[0]
+    light.detail_profile = "light"
+    light.context = None
+    standard = parse_entries(_load("streaming_yaml_valid.md"))[0]
+    standard.detail_profile = "standard"
+    standard.context = None
+
+    assert any(
+        "light profile missing context" in warning
+        for warning in validate_entry_with_warnings(light)
+    )
+    assert any(
+        "standard profile missing context" in warning
+        for warning in validate_entry_with_warnings(standard)
+    )
+
+
 def test_vague_numbered_choice_returns_fidelity_warning():
     entry = parse_entries(_load("streaming_valid.md"))[0]
     entry.chosen = "采用方案二"
