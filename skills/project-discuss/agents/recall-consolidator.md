@@ -1,6 +1,6 @@
 ---
 name: recall-consolidator
-description: "Plan-only: 把 streaming/ 里成熟主题整合为 ADR-like discussion doc,输出 yaml plan 供主 session 执行写入。"
+description: "Plan-only: 把 streaming/ 里成熟、已收尾或高影响的主题整合到 canonical discussion,输出 yaml plan 供主 session 执行写入。"
 ---
 
 <!-- 允许工具:Read / Glob / Grep(只读;Plan-only 不写文件) -->
@@ -21,11 +21,13 @@ description: "Plan-only: 把 streaming/ 里成熟主题整合为 ADR-like discus
 - `trigger_reason: section_100` — v0.4 新增：`_ACTIVE.md` 某段达 100% 硬阈值
 - `trigger_reason: cold_n_rounds` — v0.4 新增：冷启动 N 轮兜底(主 session 维护轮数计数器)
 - `trigger_reason: mtime_change` — v0.4 新增：`_ACTIVE.md` mtime 异常变化检测
+- `trigger_reason: high_impact_accepted` — 首条 High 保真决定被承接；即使只有一条 entry 也触发
+- `trigger_reason: topic_closed` — 用户明确表达"这块就这样 / 继续下一项"等收尾语义
 
 ## 输入 schema
 
 ```yaml
-trigger_reason: llm_initiated | handoff_sweep | section_70 | section_100 | cold_n_rounds | mtime_change
+trigger_reason: llm_initiated | handoff_sweep | section_70 | section_100 | cold_n_rounds | mtime_change | high_impact_accepted | topic_closed
 target_streaming_file: streaming/<file>.md   # lifecycle trigger 下可空(consolidator 自行决定落点)
 target_topic_slug: <slug>                    # lifecycle trigger 下可空
 existing_context:                            # 任何 trigger 类型均必填
@@ -50,7 +52,7 @@ lifecycle_params:                            # 可选;trigger_reason 涉及 life
 ```
 
 **必填性说明**:
-- `target_streaming_file` / `target_topic_slug`:lifecycle trigger(`section_70` / `section_100` / `cold_n_rounds` / `mtime_change`)下**可空**(consolidator 自行决定 archive 落点);`llm_initiated` / `handoff_sweep` 下必填
+- `target_streaming_file` / `target_topic_slug`:lifecycle trigger(`section_70` / `section_100` / `cold_n_rounds` / `mtime_change`)下**可空**(consolidator 自行决定 archive 落点);其他 trigger 下必填
 - `existing_context`:任何 trigger 类型均**必填**(主 session 给定上下文锚点)
 - `lifecycle_params`:lifecycle trigger 类型时**主 session 必填**;`llm_initiated` / `handoff_sweep` 时可省略
 
@@ -58,83 +60,57 @@ lifecycle_params:                            # 可选;trigger_reason 涉及 life
 
 参考 `docs/design/2026-04-21-project-discuss-v0.3-design.md` § 9.3。
 
-**必填字段**:
-- `plan_version: "v0.4"` (本字段从 v0.3 升级 v0.4)
+**新 plan 必填字段**:
+- `plan_version: "v0.5"` (`v0.3` / `v0.4` 仅供旧 plan 回放)
 - `trigger_reason`(原样回填)
 - `target_streaming_file` / `target_topic_slug` / `new_doc_path`
-- `new_doc_content.front_matter.status`(accepted | superseded)
+- `canonical_action: create_new | merge_into_existing`
+- `source_entries`:所有未被 tombstone 撤回的源 entry id
+- `coverage`:每个 `source_entries` id 恰好一条处置记录
+- `new_doc_content.front_matter.status`(accepted | implemented | stale | superseded)
+- `new_doc_content.body.{context,decision,rationale,alternatives_considered}`
 - `streaming_file_updates.front_matter_update.status: archived` + `superseded_by` + `tombstone_entry`
 
-**建议字段**(v0.4 降建议,允许灵活;dogfood 后若发现 hallucination 升回必填):
+**建议字段**:
 - `new_doc_content.front_matter.decision_id`
 - `new_doc_content.front_matter.source_streaming_file`(对照 streaming 文件名相关性,主 session 校验时可对照)
 - `new_doc_content.front_matter.references`
-- `new_doc_content.body.{context,decision,rationale,alternatives_considered}`(四节建议级,但通常都该有)
 - `active_md_edits` / `references` / `warnings`
 
-注:v0.4 后续扩展(undo_hint 等字段)可能进一步追加(届时 plan_version 仍为 "v0.4",只是字段集扩展)。
+`coverage[].disposition` 取值:
+
+- `incorporated`:已写入 canonical,必须给 `section`
+- `superseded`:被后续 entry 取代,必须给 `superseded_by`
+- `duplicate`:与已覆盖内容重复
+- `deferred`:仍待后续讨论
+- `out_of_scope`:不属于该 canonical 主题
+
+只要一个 live entry 没有 coverage,就不得输出 archive 更新。
 
 详细字段说明见 design doc § 9.3、§ 8.2。
 
 ### 输出示例(最小可运行)
 
-此示例来自 `tests/schema/fixtures/consolidator_plan_valid.yaml`(v0.4 TDD fixture,已通过 `validate_consolidator_plan.py` 校验):
-
-```yaml
-plan_version: "v0.4"
-trigger_reason: llm_initiated
-target_streaming_file: streaming/2026-04-21-handoff-redesign.md
-target_topic_slug: handoff-redesign
-
-new_doc_path: discussions/2026-04-21-handoff-redesign.md
-new_doc_content:
-  front_matter:
-    decision_id: D20
-    status: accepted
-    source_streaming_file: streaming/2026-04-21-handoff-redesign.md
-    references: []
-  body:
-    context: |
-      handoff v0.2.2 流水账膨胀,新 session 难续。
-    decision: |
-      handoff 从"备份"改为"书签",15-30 行 schema。
-    rationale: |
-      streaming 已持久化讨论内容,handoff 只需游标。
-    alternatives_considered:
-      - name: 保持 v0.2.2 五类提取
-        rejected_because: 体量不可控
-        from_source: true
-        source: ^entry-20260421-03
-
-streaming_file_updates:
-  file: streaming/2026-04-21-handoff-redesign.md
-  front_matter_update:
-    status: archived
-    superseded_by: discussions/2026-04-21-handoff-redesign.md
-  tombstone_entry:
-    id: ^entry-20260421-99
-    timestamp: 2026-04-21T18:00:00+08:00
-    body: |
-      整合入 discussions/2026-04-21-handoff-redesign.md
-
-active_md_edits: []
-references: []
-warnings: []
-```
+权威可运行示例见
+`tests/schema/fixtures/consolidator_plan_merge_coverage.yaml`;它同时展示
+`merge_into_existing`、`source_entries` 与完整 `coverage`。
 
 字段逐一对照 design doc § 9.3。输出**必须**通过 `validate_consolidator_plan.py` schema 校验;未通过 → 主 session 视为 `failed`,按失败降级处理。
 
 ## 工作流程
 
 1. **Read** `target_streaming_file`,解析所有 entry(跳过 tombstone 引用的已撤回条目)
-2. **归纳** context / decision / rationale / alternatives_considered
-3. **扫描跨讨论血缘**:
+2. **选 canonical owner**:现有 discussion 已承接同一主题时用 `merge_into_existing`;否则 `create_new`
+3. **归纳** context / decision / rationale / alternatives_considered,并保留 High entry 的通用约束
+4. **逐 entry 建 coverage**:每个 live id 标记 incorporated / superseded / duplicate / deferred / out_of_scope
+5. **扫描跨讨论血缘**:
    - 对每条 streaming entry,扫 `discussions/*.md` 的 topic slug 与 `_INDEX.md` 话题词典
    - 若 entry 内容明确提及/引用其他主题(同/相似 slug / 关键词 grep 命中)→ 把对应 discussion 路径加入 `references` 列表
    - **不做语义推断**:只记"明确提及"的,含糊相关不列(§ 17.2 接受"漏 > 误判")
    - 路径格式:相对 cadence/ 根的相对路径,如 `discussions/2026-04-01-old-topic.md`
-4. **构造** tombstone_entry(id 格式 `^entry-<YYYYMMDD>-<seq+1>`,body 写"整合入 <new_doc_path>")
-5. **输出 yaml plan**,**不写任何文件**
+6. **覆盖门**:coverage 与 source_entries 不完全相等时输出 `status: failed`,不构造 archive
+7. **构造** tombstone_entry(id 格式 `^entry-<YYYYMMDD>-<seq+1>`,body 写"整合入 <new_doc_path>")
+8. **输出 yaml plan**,**不写任何文件**
 
 ## Lifecycle 检测(v0.4 新增)
 

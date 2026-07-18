@@ -1,0 +1,34 @@
+plan_version: "v0.5"
+trigger_reason: topic_closed
+target_streaming_file: streaming/2026-07-18-writing-outline.md
+target_topic_slug: writing-outline
+canonical_action: create_new
+new_doc_path: discussions/2026-07-18-writing-outline.md
+source_entries:
+  - ^entry-20260718-01
+
+new_doc_content:
+  front_matter:
+    decision_id: D-WRITING-1
+    status: accepted
+    source_streaming_file: streaming/2026-07-18-writing-outline.md
+    references: []
+  body:
+    context: 已确认全书章节结构。
+    decision: 使用三部分结构。
+    rationale: 从问题、方法到实践逐步推进。
+    alternatives_considered: []
+
+streaming_file_updates:
+  file: streaming/2026-07-18-writing-outline.md
+  front_matter_update:
+    status: archived
+    superseded_by: discussions/2026-07-18-writing-outline.md
+  tombstone_entry:
+    id: ^entry-20260718-99
+    timestamp: 2026-07-18T18:00:00+08:00
+    body: 整合入 discussions/2026-07-18-writing-outline.md
+
+active_md_edits: []
+references: []
+warnings: []

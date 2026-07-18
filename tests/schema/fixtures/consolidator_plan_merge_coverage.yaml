@@ -1,0 +1,43 @@
+plan_version: "v0.5"
+trigger_reason: high_impact_accepted
+target_streaming_file: streaming/2026-07-18-research-release.md
+target_topic_slug: research-release
+canonical_action: merge_into_existing
+new_doc_path: discussions/2026-07-17-research-release.md
+source_entries:
+  - ^entry-20260718-01
+  - ^entry-20260718-02
+
+new_doc_content:
+  front_matter:
+    decision_id: D-RESEARCH-1
+    status: accepted
+    source_streaming_file: streaming/2026-07-18-research-release.md
+    references: []
+  body:
+    context: 研究报告即将公开，需要保存参与者授权边界。
+    decision: 公开报告只使用取得书面授权的访谈。
+    rationale: 保护参与者并使公开证据可审计。
+    alternatives_considered: []
+
+coverage:
+  - source: ^entry-20260718-01
+    disposition: incorporated
+    section: Decision
+  - source: ^entry-20260718-02
+    disposition: superseded
+    superseded_by: ^entry-20260718-01
+
+streaming_file_updates:
+  file: streaming/2026-07-18-research-release.md
+  front_matter_update:
+    status: archived
+    superseded_by: discussions/2026-07-17-research-release.md
+  tombstone_entry:
+    id: ^entry-20260718-99
+    timestamp: 2026-07-18T18:00:00+08:00
+    body: 整合入 discussions/2026-07-17-research-release.md
+
+active_md_edits: []
+references: []
+warnings: []

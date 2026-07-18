@@ -2,8 +2,8 @@
 recall-consolidator plan yaml validator.
 
 Plan schema(design doc § 9.3 MVP):
-    plan_version: "v0.3" | "v0.4"         # 必需;v0.3/v0.4 均接受
-    trigger_reason: llm_initiated | handoff_sweep
+    plan_version: "v0.3" | "v0.4" | "v0.5"
+    trigger_reason: <VALID_TRIGGERS>
     target_streaming_file: <path>
     target_topic_slug: <slug>
     new_doc_path: discussions/<date>-<slug>.md
@@ -26,6 +26,11 @@ Plan schema(design doc § 9.3 MVP):
     references: []              # optional
     warnings: []                # optional
 
+v0.5 schema additions:
+- canonical_action: create_new | merge_into_existing
+- source_entries: every live source entry included in the plan
+- coverage: one disposition for every source entry; archive is rejected if incomplete
+
 v0.4 schema 变更(design doc § 5.2.5):
 - decision_id / source_streaming_file / front_matter.references / body 四节
   从必填降为建议(缺失不报错,存在则校验合法性)
@@ -42,6 +47,7 @@ if __name__ == "__main__" 段(几乎一致)。暂不提取共享 helper;待第 4
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -53,8 +59,26 @@ except ImportError as e:
     raise SystemExit("pip install pyyaml required") from e
 
 
-VALID_TRIGGERS = {"llm_initiated", "handoff_sweep"}
-VALID_PLAN_VERSIONS = {"v0.3", "v0.4"}
+VALID_TRIGGERS = {
+    "llm_initiated",
+    "handoff_sweep",
+    "section_70",
+    "section_100",
+    "cold_n_rounds",
+    "mtime_change",
+    "high_impact_accepted",
+    "topic_closed",
+}
+VALID_PLAN_VERSIONS = {"v0.3", "v0.4", "v0.5"}
+VALID_CANONICAL_ACTIONS = {"create_new", "merge_into_existing"}
+VALID_COVERAGE_DISPOSITIONS = {
+    "incorporated",
+    "superseded",
+    "duplicate",
+    "deferred",
+    "out_of_scope",
+}
+ENTRY_ID_RE = re.compile(r"^(?:\^entry-\d{8}-\d{2,}|e\d+)$")
 LIFECYCLE_ACTIONS = {"archive_decision", "delete_todo", "promote_pending_to_decision"}
 
 # ---------------------------------------------------------------------------
@@ -135,6 +159,9 @@ def validate_plan(plan: dict) -> None:
         raise ValueError(
             f'new_doc_path must start with "discussions/", got {plan["new_doc_path"]!r}'
         )
+
+    if pv == "v0.5":
+        _validate_v05_coverage(plan)
 
     ndc = plan.get("new_doc_content")
     if not isinstance(ndc, dict):
@@ -230,6 +257,61 @@ def validate_plan(plan: dict) -> None:
                 from_status, new_status, transitions,
                 action=f"active_md_edits[{i}] transition"
             )
+
+
+def _validate_v05_coverage(plan: dict) -> None:
+    action = plan.get("canonical_action")
+    if action not in VALID_CANONICAL_ACTIONS:
+        raise ValueError(
+            f"canonical_action must be in {sorted(VALID_CANONICAL_ACTIONS)}, "
+            f"got {action!r}"
+        )
+
+    source_entries = plan.get("source_entries")
+    if not isinstance(source_entries, list) or not source_entries:
+        raise ValueError("source_entries required and non-empty for v0.5")
+    if len(set(source_entries)) != len(source_entries):
+        raise ValueError("source_entries must not contain duplicates")
+    for index, entry_id in enumerate(source_entries):
+        if not isinstance(entry_id, str) or not ENTRY_ID_RE.match(entry_id):
+            raise ValueError(f"source_entries[{index}] invalid entry id: {entry_id!r}")
+
+    coverage = plan.get("coverage")
+    if not isinstance(coverage, list) or not coverage:
+        raise ValueError("coverage required and non-empty before archive")
+
+    covered_sources = []
+    for index, item in enumerate(coverage):
+        if not isinstance(item, dict):
+            raise ValueError(f"coverage[{index}] must be a dict")
+        source = item.get("source")
+        if not isinstance(source, str) or not ENTRY_ID_RE.match(source):
+            raise ValueError(f"coverage[{index}].source invalid: {source!r}")
+        disposition = item.get("disposition")
+        if disposition not in VALID_COVERAGE_DISPOSITIONS:
+            raise ValueError(
+                f"coverage[{index}].disposition must be in "
+                f"{sorted(VALID_COVERAGE_DISPOSITIONS)}, got {disposition!r}"
+            )
+        if disposition == "incorporated" and not item.get("section"):
+            raise ValueError(
+                f"coverage[{index}].section required for incorporated entry"
+            )
+        if disposition == "superseded" and not item.get("superseded_by"):
+            raise ValueError(
+                f"coverage[{index}].superseded_by required for superseded entry"
+            )
+        covered_sources.append(source)
+
+    if len(set(covered_sources)) != len(covered_sources):
+        raise ValueError("coverage must not contain duplicate source entries")
+    if set(covered_sources) != set(source_entries):
+        missing = sorted(set(source_entries) - set(covered_sources))
+        extra = sorted(set(covered_sources) - set(source_entries))
+        raise ValueError(
+            "coverage must account for every source_entries item; "
+            f"missing={missing}, extra={extra}"
+        )
 
 
 def validate_plan_with_warnings(plan):

@@ -133,12 +133,12 @@ def test_plan_status_still_required_v04():
 
 
 def test_plan_version_v04_accepted():
-    """v0.4 plan_version: 'v0.4' 被接受, 未知版本 'v0.5' 被拒绝"""
+    """v0.4 plan_version 被接受，未来未知版本仍被拒绝。"""
     plan = _base_plan_v04()  # 默认 plan_version = "v0.4"
     validate_plan(plan)  # 不抛即通过
 
     # 负面 assertion: 未知版本应被拒绝
-    plan["plan_version"] = "v0.5"
+    plan["plan_version"] = "v0.6"
     with pytest.raises(ValueError, match="plan_version"):
         validate_plan(plan)
 
@@ -251,3 +251,42 @@ def test_plan_status_transition_first_assignment_v04():
         "undo_hint": "test undo",
     }]
     validate_plan(plan)  # 不抛即通过
+
+
+def test_merge_plan_with_complete_coverage_passes():
+    plan = _load("consolidator_plan_merge_coverage.yaml")
+    validate_plan(plan)
+
+
+def test_archive_rejects_missing_coverage_v05():
+    plan = _load("consolidator_plan_missing_coverage.yaml")
+    with pytest.raises(ValueError, match="coverage"):
+        validate_plan(plan)
+
+
+def test_coverage_must_account_for_every_source_entry():
+    plan = _load("consolidator_plan_merge_coverage.yaml")
+    plan["coverage"].pop()
+    with pytest.raises(ValueError, match="source_entries"):
+        validate_plan(plan)
+
+
+def test_superseded_coverage_requires_target():
+    plan = _load("consolidator_plan_merge_coverage.yaml")
+    plan["coverage"][1].pop("superseded_by")
+    with pytest.raises(ValueError, match="superseded_by"):
+        validate_plan(plan)
+
+
+@pytest.mark.parametrize("trigger", [
+    "section_70",
+    "section_100",
+    "cold_n_rounds",
+    "mtime_change",
+    "high_impact_accepted",
+    "topic_closed",
+])
+def test_documented_triggers_are_accepted(trigger):
+    plan = _load("consolidator_plan_merge_coverage.yaml")
+    plan["trigger_reason"] = trigger
+    validate_plan(plan)
