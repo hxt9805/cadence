@@ -16,9 +16,10 @@ description: >
 
 L1 协议入口：管理项目讨论、记录决策、处理查询、记录 incidents。
 
-本 SKILL.md 是动作骨架 + Phase 化导航。L0 借口反驳 4 项（#1/#2/#4/#5）+ 单判据 happy path 已在 `cadence-bootstrap/SKILL.md` inline；细则单一权威源在 `references/`，按需读取：
+本 SKILL.md 是动作骨架 + Phase 化导航。L0 借口反驳 4 项（#1/#2/#4/#5）+ 三段式判定 happy path 已在 `cadence-bootstrap/SKILL.md` inline；细则单一权威源在 `references/`，按需读取：
 
 - `references/recording-protocol.md` — 记 阶段细则 + 信息密度正反例 + entry schema + **incidents 附录（v0.5 合并 incident-handling.md）**
+- `references/recording-fidelity.md` — **通用语义保真：三段式判定、Light/Standard/High、承接短句回溯、冷启动检查**
 - `references/query-behavior.md` — 查询行为 + 4 trigger 主动重读 + **文档可信度 L1-L4（v0.5 合并 doc-reliability-protocol.md）**
 - `references/harness-adapters.md` — **Codex `spawn_agent` + OpenCode 工具映射（v0.5 合并 codex-tools.md + opencode-tools.md）**
 
@@ -42,32 +43,35 @@ L1 协议入口：管理项目讨论、记录决策、处理查询、记录 inci
 
 完整细则见 `references/recording-protocol.md`。
 
-### Phase 1 记 — 触发 / 落点 / 告知 / 铁律 / 质量自检
+### Phase 1 记 — 三段式判定 / 落点 / 告知 / 铁律 / 质量自检
 
-- **触发**：单判据「已被承接」命中 → append streaming entry
+- **承接**：用户明确或隐含确认了候选方案
+- **增量**：该方案改变了可持续影响后续工作的目标、范围、规则、顺序、边界、状态、风险、依赖、否决项或下一步
+- **深度**：按通用影响维度选择 Light / Standard / High；不是所有 entry 都套同一个 minimum
 - **落点**：`cadence/streaming/<YYYY-MM-DD>-<topic-slug>.md`
 - **铁律**：append-only（不修改已有 entry；撤回 = append tombstone）
 - **告知**：一行 `📝 已记：<摘要> → <path>`
 
-★ **质量自检 checklist**（扩展 L0 §5c 简版）：
+用户只说“可以”“认可”“方案二”或“按你推荐的来”时，先回溯它明确指向的最近完整方案。记录对象是被承接方案的持久语义，**不是承接短句本身**；范围明确时自动提取并记录，只有指向多个候选方案而无法可靠判断时才询问用户。
 
-写完 entry 后自检以下 6 项，任一关键缺失 → append 补充段：
+★ **profile-aware 质量自检 checklist**（扩展 L0 §5c 简版）：
 
-  ☐ `chosen`        — 选了什么方案？（必填）
-  ☐ `context`       — 决策的前提 / 场景？
-  ☐ `options`       — 讨论中有过哪些候选？
-  ☐ `rejected`      — 为什么不选其他？各自被排除原因？
-  ☐ `dependencies`  — 是否依赖其他 entry（引用 id）？（可选）
-  ☐ `status`        — accepted / pending / superseded？
+所有 profile 都先检查：
 
-minimum 充分组合：`chosen + context + (options 或 rejected)`
-trap signal：单写"chosen X 已承接"必然下游失血，补充 `context` + `rejected`
+  ☐ `chosen`         — 选了什么，适用边界是什么？
+  ☐ `context`        — 为什么此时需要决定？
+  ☐ `status`         — accepted / pending / superseded？
+  ☐ `provenance`     — explicit / synthesized / inferred 是否与内容一致？
 
-完整正反例详见 `references/recording-protocol.md` § 2「信息密度正反例」。
+- **Light**：`context + chosen`
+- **Standard**：Light + `rationale`；真实讨论过时再写 `options/rejected/dependencies/open_questions`
+- **High**：`context + chosen + rationale` + 适用的通用语义槽；不适用但容易被误解为遗漏的槽写入 `not_applicable`
+
+trap signal：`chosen: 方案二`、`chosen: 按推荐方案处理` 或复制聊天原句，都会让下游失去实际规则与边界。完整规则见 `references/recording-fidelity.md`，格式正反例见 `references/recording-protocol.md` § 2。
 
 ### Phase 2 整 — 触发 / 流程
 
-**触发**：LLM 自判（话题收尾 / context ≥80% / `_ACTIVE.md` 段达阈值 / handoff 兜底）。
+**触发**：LLM 自判（High 决定被承接 / 话题明确收尾 / context ≥80% / `_ACTIVE.md` 段达阈值 / handoff 兜底）。
 
 **流程**：派 `recall-consolidator` subagent（Plan-only）→ 接收 yaml plan → 主 session 三步写（Write → Validate → Archive）。Validate 未通过绝不进入 Archive。
 
@@ -164,10 +168,10 @@ trap signal：单写"chosen X 已承接"必然下游失血，补充 `context` + 
 Session 进行中若发现本 skill 未触发（典型信号：已在讨论 / 决策但从未加载 `_INDEX.md`、从未记录任何条目），必须：
 
 1. 立即激活本 skill（补调 `Skill("project-discuss")`）
-2. 追溯征询：列出本 session 已产生的决策点，一次性问"要全记 / 选记（指出编号）/ 都别记？"
-3. 按用户选择补写，汇报时说明"追溯记录"
+2. 对范围明确的已承接决定，按持久语义增量和 profile 自动补写，并汇报"追溯记录"
+3. 只有承接对象或决定边界确实含糊时，才列出歧义点询问用户；不要要求用户重做整场讨论摘要
 
-宁可多自检一次，不要等用户质问。
+宁可多自检一次，不要等用户质问，也不要把插件本应完成的整理工作转嫁给用户。
 
 ## § 7. 特殊场景处理
 
@@ -204,6 +208,7 @@ Session 进行中若发现本 skill 未触发（典型信号：已在讨论 / �
 | 文档可信度 L1-L4 | `references/query-behavior.md` § 11 |
 | Harness 适配（CC / OpenCode / Codex） | `references/harness-adapters.md` |
 | 信息密度正反例 / entry schema | `references/recording-protocol.md` § 2 |
+| 三段式判定 / Light-Standard-High / 承接短句 | `references/recording-fidelity.md` |
 | 查询前置 / 4 trigger 主动重读 | `references/query-behavior.md` |
 
 ## § 9. Session 结束提醒（克制版）

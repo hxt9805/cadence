@@ -1,6 +1,6 @@
 ---
 name: cadence-bootstrap
-description: Use when starting any conversation in a cadence-managed project (project root contains cadence/_INDEX.md or cadence/_ACTIVE.md). Establishes cadence workflow conventions — 记 / 整 / 查 三阶段记录协议, _ACTIVE.md / _INDEX.md state contract, recording criterion 单判据「已被承接」, session start behaviors, and subagent dispatch rules. CC harness reads this skill via SessionStart hook injection (automatic). Codex / other harnesses match this description on session start (progressive disclosure trigger) — LLM should load skill body on first cadence-related user turn.
+description: Use when starting any conversation in a cadence-managed project (project root contains cadence/_INDEX.md or cadence/_ACTIVE.md). Establishes cadence workflow conventions — 记 / 整 / 查 三阶段记录协议, _ACTIVE.md / _INDEX.md state contract, domain-neutral adaptive recording fidelity, session start behaviors, and subagent dispatch rules. CC harness reads this skill via SessionStart hook injection (automatic). Codex / other harnesses match this description on session start (progressive disclosure trigger) — LLM should load skill body on first cadence-related user turn.
 ---
 
 ## Cadence 工作流
@@ -24,9 +24,17 @@ context 随时可能被 `/compact` 或重置。**新 session / `/compact` 后必
 - 完整 reasoning / trade-off → `discussions/<date>-<slug>.md`（整 阶段产物）
 - 流式 entry → `streaming/<YYYY-MM-DD>-<topic-slug>.md`(记 阶段，append-only)
 
-### § 4. 单判据「已被承接」
+### § 4. 三段式记录判定
 
-**承接对象覆盖"结论 OR 中间决定"**：用户明确或隐含确认过即记；未命中则不记。
+```text
+承接决定是否记录
+持久语义增量决定是否新建 entry
+影响等级决定记录多详细
+```
+
+1. **承接**：用户明确或隐含确认了结论或中间决定；未承接的探索不记成 accepted。
+2. **持久语义增量**：只有目标、范围、规则、顺序、边界、状态、风险、依赖、否决项或后续行动发生稳定变化时才新建 entry。重复确认不重复记。
+3. **影响等级**：按可逆性、影响范围、损失风险、持续时间、外部承诺、不确定性和协作复杂度选择记录深度，不按项目领域套固定模板。
 
 **强信号（视为已承接）**：
 
@@ -38,9 +46,15 @@ context 随时可能被 `/compact` 或重置。**新 session / `/compact` 后必
 
 - 沉默 / 反问质疑（"确定吗？"还在讨论）
 
-**倾向漏记 > 噪音**：档案膨胀比漏记一条成本更高；重要决策会反复出现、届时补记。
+不确定是否形成持久增量时，优先写一条 **Light** entry；不要假设重要内容以后一定会再次出现，也不要把整理负担转交给用户。
 
-完整正反例 + 4 trigger 主动重读详见 L2 `recording-protocol.md`。
+| profile | 适用 | 最低保真度 |
+|---|---|---|
+| Light | 局部、低风险、易撤回 | `context + chosen` |
+| Standard | 影响一个阶段、多个产物或后续讨论 | Light + `rationale` + 真实存在的替代/依赖/待决 |
+| High | 难逆、长周期、外部承诺或高损失风险 | `context + chosen + rationale` + 适用的通用语义槽 |
+
+完整规则、通用语义槽、跨领域示例和敏感信息边界见 L2 `../project-discuss/references/recording-fidelity.md`；格式和流程见 `recording-protocol.md`。
 
 ### § 5. 记录动作（happy path）
 
@@ -53,8 +67,10 @@ context 随时可能被 `/compact` 或重置。**新 session / `/compact` 后必
 id: e1
 created: 2026-05-21T12:30:00+08:00
 status: accepted
+detail_profile: standard
 chosen: 显式「开始学习」按钮触发
 context: 教学模式 UX 设计访谈中讨论"首次进入"入口形态；担心自动触发误启动 session
+rationale: 保留用户主动控制，同时避免额外确认弹窗
 options:
   - 显式按钮触发
   - 自动进入教学
@@ -70,7 +86,7 @@ rejected:
 后续进入：自动恢复 active session，不重发开场白
 ````
 
-> 📌 **非强制** — Markdown 段落格式也合法，**只要信息密度达到 `(chosen + context + options/rejected 三选二)` minimum 组合**。
+> 📌 **非强制** — Markdown 段落格式也合法。保真度采用 **profile-aware** 规则：Light 至少 `context + chosen`；Standard 增加 rationale 和真实存在的取舍/依赖/待决；High 按适用语义槽完整记录。
 
 #### § 5b. 信息密度对照（一眼看反差）
 
@@ -80,10 +96,11 @@ rejected:
    - 用「开始学习」按钮触发
    - 已承接
 
-✅ 充分（含 chosen + context + rejected，下游可独立理解）：
+✅ Standard 充分（含 chosen + context + rationale + rejected，下游可独立理解）：
    ## E1: 教学入口用「开始学习」按钮触发
    讨论 UX 入口形态（自动 / 弹窗 / 按钮 3 方案）
    chosen: 显式按钮 — 用户点击后创建 session
+   rationale: 保留用户主动控制，同时避免额外确认弹窗
    rejected: 自动进入（误启动）/ 弹窗（打断流程）
 ```
 
@@ -91,9 +108,9 @@ rejected:
 
 #### § 5c. 写完 entry 立即自检（L0 简版）
 
-`chosen / context / (options 或 rejected)` 三项 minimum 是否齐？任一关键缺失 → **append 补充段**（append-only，不重写已有 entry）。完整 6 项 checklist 见 L1 `project-discuss/SKILL.md` § 2 Phase 1。
+先确认记录对象是已承接方案的持久语义，再确认 profile 与信息密度相符。任一关键缺失 → **append 补充段**（append-only，不重写已有 entry）。完整 checklist 见 L1 `project-discuss/SKILL.md` § 2 Phase 1。
 
-> ⚠️ 本 session 未 Read 过 L2 `recording-protocol.md` § 2「信息密度正反例」时，**先 Read 一次后续复用**（不每次 entry 重读 — context 膨胀）。
+> ⚠️ 本 session 未 Read 过 L2 `recording-fidelity.md` 与 `recording-protocol.md` § 2 时，**各 Read 一次后续复用**（不每次 entry 重读 — context 膨胀）。
 
 ### § 6. project-discuss 激活规则
 
@@ -110,7 +127,7 @@ session 首条"项目相关"发言 → **必须** `Skill("project-discuss")`。
 
 | 阶段 | 谁做 | 何时 | 产物 |
 |---|---|---|---|
-| **记（α 流式）** | 主 session 直写 | 命中判据 | `streaming/<date>-<slug>.md` append entry |
+| **记（α 流式）** | 主 session 直写 | 承接 + 持久语义增量 | `streaming/<date>-<slug>.md` append entry |
 | **整（ε 整合）** | `recall-consolidator`（Plan-only） | 手动 `/cadence-consolidate` 或 Phase B 自动条件 | `discussions/<date>-<slug>.md` ADR-like doc |
 | **查（ρ 检索）** | `recall-retriever` | 跨 session 历史查询 | summary + pointers（<500 tokens 硬限） |
 
@@ -129,9 +146,9 @@ session 首条"项目相关"发言 → **必须** `Skill("project-discuss")`。
 | # | 借口 | 反驳 |
 |---|---|---|
 | 1 | "流程 skill 已激活，project-discuss 可跳过" | **错** — 两者正交，brainstorming 管探索、project-discuss 管档案落地 |
-| 2 | "用户没明确说要记" | **错** — 单判据扩展到"中间决定"，承接信号一命中就记 |
+| 2 | "用户没明确说要记" | **错** — 用户承接且形成持久语义增量时应主动记录 |
 | 4 | "概念太多，简化执行" | **错** — 已简化到 3 阶段（记/整/查），不要凭印象判断"这次例外" |
-| 5 | "这条不重要，先不写 archive" | **错** — 判断标准是"是否被承接"，不是主观重要性 |
+| 5 | "这条影响不大，先不记" | **错** — 低影响用 Light，不等于不记录；是否新建由持久语义增量决定 |
 
 > #3「上限到了再问归档」依赖段管理概念，见 L1 `project-discuss/SKILL.md`。
 
@@ -140,6 +157,7 @@ session 首条"项目相关"发言 → **必须** `Skill("project-discuss")`。
 - **完整协议**：`Skill("project-discuss")`
 - **细则单一权威源**：
   - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/recording-protocol.md` — 记 阶段细则 + 信息密度正反例 + entry schema + incidents 附录（§8）
+  - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/recording-fidelity.md` — 通用三段式判定 + Light/Standard/High + 冷启动保真检查
   - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/query-behavior.md` — 查询前置 + 4 trigger 重读 + 文档可信度 L1-L4（§11）
   - `${CLAUDE_PLUGIN_ROOT}/skills/project-discuss/references/harness-adapters.md` — Codex `spawn_agent` + OpenCode 工具映射（v0.5 合并 codex-tools + opencode-tools）
 - **关系契约**：L0 是 L2 细则的**精炼摘要**，不是平行定义。L0/L2 冲突时以 L2 为准。

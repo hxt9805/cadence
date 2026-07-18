@@ -3,32 +3,47 @@
 > project-discuss skill 的记录行为遵循本协议。本文件是 skill 的内部行为细则，
 > 指导 Claude 何时、如何、记录什么。
 >
-> **v0.4 现状 + v0.5 调整**：单判据「已被承接」+ 3 Phase（记 / 整 / 查）+ 共享行为 + 边界 + 历史脉络 + **incidents 附录**（v0.5 合并自 `incident-handling.md`）。
+> **v0.5 调整**：三段式记录判定 + profile-aware 语义保真 + 3 Phase（记 / 整 / 查）+ 共享行为 + 边界 + 历史脉络 + **incidents 附录**（v0.5 合并自 `incident-handling.md`）。
 > 借口反驳 #1/#2/#4/#5 已上移 L0 `cadence-bootstrap/SKILL.md` §8；#3 上移 L1 `project-discuss/SKILL.md` §4。
+> 影响分级、通用语义槽、承接短句与冷启动检查的权威源是 `recording-fidelity.md`。
 
 ## 导航
 
-- §1 记录单判据 / §2 记 阶段（含信息密度正反例 + dual schema）/ §3 整 阶段 / §4 查 阶段
+- §1 三段式记录判定 / §2 记 阶段（含信息密度正反例 + dual schema）/ §3 整 阶段 / §4 查 阶段
 - §5 共享行为 / §6 边界与禁忌 / §7 历史脉络
 - **§8 Incidents 附录**（bug / 事故 / tricky fix 记录细则，v0.5 合并自 `incident-handling.md`）
 
 ---
 
-## 1. 记录单判据
+## 1. 三段式记录判定
 
-**唯一判据：「已被承接」**（用户明确或隐含确认过）。
+```text
+承接决定是否记录
+持久语义增量决定是否新建 entry
+影响等级决定记录多详细
+```
 
-### v0.4 承接对象扩展
+### 承接
 
-判据本身不变，但**承接对象**从"结论"扩展到"结论 OR 中间决定"：
+承接对象覆盖“结论 OR 中间决定”。用户明确或隐含确认过，才可能写成 accepted：
 
 | 内容类型 | 记？ | 说明 |
 |---|---|---|
 | 用户对结论的承接（"嗯，就用 PostgreSQL"） | ✅ | 不变 |
 | 用户对中间决定的承接（"嗯，先排除 C"） | ✅ | **v0.4 扩展** |
-| LLM 推断的"这条有未来价值" | ❌ | 不引入"未来价值"判据 |
+| LLM 推断的"这条有未来价值" | ❌ | 不能写成用户已承接 |
 
-**关键**：仍只判**用户承接信号**，不判未来价值。未来价值留给整合阶段（Phase 2）consolidator 处理。
+### 持久语义增量
+
+承接后再判断是否出现稳定变化。目标、范围、非目标、规则、顺序、边界、状态、关系、
+依赖、风险、真实否决项或下一步发生变化时新建 entry；重复确认已有记录不重复写。
+判断存在合理不确定性时写 Light entry，不假设内容以后会再次出现。
+
+### 影响等级
+
+按可逆性、影响范围、损失风险、持续时间、外部承诺、不确定性和协作复杂度选择
+**Light / Standard / High**。领域名称只可作示例，不能决定 profile 或固定 schema。
+详细字段与例子见 `recording-fidelity.md`。
 
 ### 未命中 → 不记
 
@@ -44,7 +59,7 @@
 
 ### 触发条件
 
-判据命中（§1）→ 立即写，不等用户说"记下"。
+承接且形成持久语义增量（§1）→ 立即写，不等用户说“记下”。
 
 隐含承接信号（详见 §5 共享行为）：
 - **强信号**：「嗯」「好」「OK」+ 跟在决定后；用户基于此前提推进后续；用户引用此决定推后续行动
@@ -98,6 +113,15 @@ entry 会被下游 session（另一个 LLM、另一个讨论话题）读取。�
 
 读者通过 `context` 知道场景；通过 `options` + `rejected` 知道决策路径；通过 `chosen` 的细节知道实现意图。
 
+### Profile-aware 保真度
+
+- Light：至少 `context + chosen`
+- Standard：Light + `rationale`，并记录真实存在的取舍、依赖和待决问题
+- High：`context + chosen + rationale` + 适用的通用语义槽；明确不适用的关键槽可列入 `not_applicable`
+
+不得为了填模板虚构理由、替代方案或外部承诺。用户仅以“可以”“方案二”等短句承接时，
+必须回溯完整方案并记录其稳定语义，不能把短句本身当作 `chosen`。
+
 ### Schema
 
 #### 文件 front-matter（每文件一份）
@@ -120,13 +144,15 @@ last_entry: ^entry-<id>                        # 每次追加时更新
 ^entry-<YYYYMMDD>-<seq> [<ISO-8601 TZ>] <一句摘要>
   context: <前提/场景>
   options: [A, B, C]
-  chosen: <选中方案>
+  chosen: <选中方案及适用边界>
+  rationale: <选择理由；Standard / High 必填>
   rejected:
     - <方案 B>: <原因>
 ```
 
-- **必填**：entry id（seq 从 01 起两位递增）、ISO-8601 带时区时间戳、摘要（≤60 字符建议）、`chosen`
-- **选填**：context / options / rejected
+- **基础必填**：entry id（seq 从 01 起两位递增）、ISO-8601 带时区时间戳、摘要（≤60 字符建议）、`context`、`chosen`
+- **按 profile 必填**：Standard / High 的 `rationale`；High 还需适用的语义槽或 `not_applicable`
+- **按事实选填**：options / rejected / dependencies / open_questions / provenance
 - **options 硬约束**：必须 inline flow 形式 `options: [A, B, C]`，不支持多行 list
 
 #### Tombstone（撤回用）
@@ -155,11 +181,12 @@ tombstone 必有 `ref` + `reason`。订正（错字等）同理：追加新 entr
 
 新 entry 推荐使用 YAML frontmatter + markdown body 格式（详 L0 `cadence-bootstrap/SKILL.md` §5a）；旧 markdown 段落格式（本节上方 `^entry-` 行首形式）**仍然合法**。LLM 是 polyglot reader，两种格式都能被下游消费者（`recall-consolidator` / `recall-retriever`）正确读取。
 
-**dogfood 实证**：信息密度（`chosen` + `context` + `options/rejected`）比 schema 形式更重要。
+**dogfood 实证**：profile-aware 语义保真度比 schema 形式更重要；两种格式都必须满足
+`recording-fidelity.md` 的 Light / Standard / High 要求。
 
 ### 记阶段绝不做的事
 
-- 未来价值判断（留整合阶段）
+- 未被承接的未来价值判断（留整合阶段）
 - 合并 / 去重（留整合阶段）
 - ADR 化（留整合阶段）
 - 修改已有条目（铁律 append-only）
@@ -287,7 +314,7 @@ body（建议四节）：`## Context` / `## Decision` / `## Rationale` / `## Alt
 
 | 信号 | 行为 |
 |---|---|
-| 「记一下」/「记录」 | **必记**，不判断单判据 |
+| 「记一下」/「记录」 | **必记**；仍按持久语义增量选颗粒度、按影响等级选 profile |
 | 「别记」/「不用记」 | 不记，本 session 不再主动提 |
 | 「撤回」/「忘掉 X」 | 立即撤 + 一行告知 |
 | 「改 X 为 Y」 | 覆盖记录 + 一行变更原因 |
@@ -372,7 +399,7 @@ v0.3 design doc（`docs/design/2026-04-21-project-discuss-v0.3-design.md`）保�
 ## 8. Incidents 附录（v0.5 合并自 incident-handling.md）
 
 > Incidents = bug / 事故 / tricky fix 等需要留档的"意外事件"。本节是 §2-§4 三阶段在 incident 场景的特化模板。
-> v0.5 起 `incident-handling.md` 已合并入本附录；主体协议（单判据 / 三阶段 / recall-analyzer）见 §1-§6。
+> v0.5 起 `incident-handling.md` 已合并入本附录；主体协议（三段式判定 / 三阶段 / recall-analyzer）见 §1-§6。
 
 ### 触发条件
 
@@ -384,9 +411,10 @@ v0.3 design doc（`docs/design/2026-04-21-project-discuss-v0.3-design.md`）保�
 - Tricky 的代码修改（修复逻辑非显而易见）
 - 揭示了既有架构或设计问题的修改
 
-### 单判据 + 承接信号（incident 特化）
+### 三段式判定 + 承接信号（incident 特化）
 
-按 §1 单判据「已被承接」。incident 场景的承接典型信号：
+按 §1 先判断承接，再判断是否形成值得独立记录的持久语义增量，最后选择 profile。
+incident 场景的承接典型信号：
 
 - 用户说"修好了" / "问题解决了" / "可以了"
 - 用户基于修复推进后续工作（"那我接着做 X"）
@@ -394,7 +422,7 @@ v0.3 design doc（`docs/design/2026-04-21-project-discuss-v0.3-design.md`）保�
 
 **根因未明时**：先记简版 entry，`context` 标"根因待查"，后续讨论继续 append 新 entry 补全（append-only 铁律 — 不修改已有条目）。
 
-**仍可不记的 bug**（即便承接也低价值）：typo / null check 漏了 / 一次性小问题 / git commit message 足够说清楚的。这类筛选由整 阶段（§3）consolidator 处理（可能不产出独立 incident doc，只留 streaming entry）。
+**通常不形成独立语义增量的 bug**：纯 typo、显而易见的一次性修正、或现有产物引用已足够恢复语义且没有新增规则/风险/约束。这类不必新建 incident entry；如果存在合理不确定性则写 Light。已写入 streaming 的低影响修复可由整阶段决定不产出独立 incident doc。
 
 ### 记 / 整 / 查 在 incident 场景的特化
 
