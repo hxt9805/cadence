@@ -33,6 +33,15 @@ def test_codex_discovers_the_shared_root_skills_directory():
     ).is_file()
 
 
+def test_codex_marketplace_plugin_names_match_the_plugin_manifest():
+    manifest = json.loads(_read(".codex-plugin/plugin.json"))
+    marketplace = json.loads(_read(".agents/plugins/marketplace.json"))
+
+    assert [plugin["name"] for plugin in marketplace["plugins"]] == [
+        manifest["name"]
+    ]
+
+
 def test_claude_hook_reads_the_shared_root_bootstrap_skill():
     hook = _read("hooks/session-start")
     assert (

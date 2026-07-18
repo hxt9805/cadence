@@ -16,19 +16,6 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
-    },
-    {
-      "name": "cadence-preview",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/hxt9805/cadence.git",
-        "ref": "preview"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Productivity"
     }
   ]
 }
