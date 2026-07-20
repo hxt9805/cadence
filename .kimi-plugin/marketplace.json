@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "plugins": [
+    {
+      "id": "cadence",
+      "tier": "third-party",
+      "displayName": "Cadence",
+      "version": "0.5.0",
+      "description": "讨论驱动的通用项目工作流插件 — 记 / 整 / 查 三阶段协议,把 session 中已承接的决定落地到项目档案(Claude Code / OpenCode first-class,Codex / Kimi Code 兼容层)",
+      "homepage": "https://github.com/hxt9805/cadence",
+      "keywords": [
+        "workflow",
+        "project-management",
+        "discussion",
+        "session-handoff",
+        "skills"
+      ],
+      "source": "https://github.com/hxt9805/cadence"
+    },
+    {
+      "id": "cadence-preview",
+      "tier": "third-party",
+      "displayName": "Cadence (Preview)",
+      "description": "预览版(preview 分支) — 新功能,可能不稳定。Stable 用 cadence。",
+      "homepage": "https://github.com/hxt9805/cadence",
+      "keywords": [
+        "workflow",
+        "project-management",
+        "discussion",
+        "session-handoff",
+        "skills",
+        "preview"
+      ],
+      "source": "https://github.com/hxt9805/cadence/tree/preview"
+    }
+  ]
+}

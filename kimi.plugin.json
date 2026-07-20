@@ -1,0 +1,30 @@
+{
+  "name": "cadence",
+  "version": "0.6.0-preview.1",
+  "description": "讨论驱动的通用项目工作流插件 — 通过 记 / 整 / 查 三阶段协议自动落地决定、约束、待决问题和下一步,支持长 session handoff 与跨 session resume(Claude Code / OpenCode first-class,Codex / Kimi Code 兼容层)",
+  "keywords": [
+    "workflow",
+    "project-management",
+    "discussion",
+    "session-handoff",
+    "skills",
+    "claude-code-plugin",
+    "codex-cli",
+    "kimi-code"
+  ],
+  "author": {
+    "name": "hxt9805"
+  },
+  "homepage": "https://github.com/hxt9805/cadence",
+  "license": "MIT",
+  "skills": [
+    "./skills/"
+  ],
+  "interface": {
+    "displayName": "Cadence",
+    "shortDescription": "Domain-neutral project workflow for session decisions and TODOs.",
+    "longDescription": "Cadence captures decisions and TODOs from AI coding sessions into project archives, with built-in subagent dispatch for context-isolated retrieval and consolidation. It supports compacted contexts, session resets, and cross-session continuity. On Kimi Code it runs as a compat layer (same strategy as Codex): skill descriptions are discovered natively and the bootstrap body is loaded on demand by the LLM.",
+    "developerName": "hxt9805",
+    "websiteURL": "https://github.com/hxt9805/cadence"
+  }
+}

@@ -2,7 +2,7 @@
 
 讨论驱动的通用项目工作流插件 — 通过 **记 / 整 / 查** 三阶段记录协议，把 AI session 中已承接的决定、约束、待决问题和下一步自动落地到项目档案，支持长 session handoff 与跨 session resume。软件、研究、写作、学习、运营等项目使用同一套核心协议。
 
-> **Claude Code 与 OpenCode 都是 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 通过兼容层支持——SessionStart hook、Task tool、`${CLAUDE_PLUGIN_ROOT}` 在 Codex 没有原生等价,部分体验依赖 LLM 自适应;详见下文 [平台与兼容性](#平台与兼容性)。
+> **Claude Code 与 OpenCode 都是 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 与 Kimi Code CLI 通过兼容层支持——Codex 没有 SessionStart hook、Task tool、`${CLAUDE_PLUGIN_ROOT}` 的原生等价,Kimi Code 的插件系统处于 Beta,两边都依赖 native skill discovery + LLM 自适应;详见下文 [平台与兼容性](#平台与兼容性)。
 
 ## 这是什么
 
@@ -110,6 +110,38 @@ enabled = true
 
 > 详细 Codex 形态适配（subagent dispatch 铁律 / sandbox / `$plugin:skill` 触发语法 / context 预算）见 [`skills/project-discuss/references/harness-adapters.md`](skills/project-discuss/references/harness-adapters.md)。
 
+### Kimi Code CLI
+
+> ⚠️ Kimi Code 的插件系统处于 **Beta**（配置定义未来可能调整）。cadence 在 Kimi 上为**兼容层形态**（与 Codex 同策略）：不做 session 启动硬注入，靠 native skill discovery 软 gating——`cadence-bootstrap` 的 description 自带触发条件（项目根存在 `cadence/_INDEX.md` 才适用），未 init 项目只保留描述级占位、不加载协议正文。
+
+**自定义市场安装（推荐）**
+
+在 Kimi Code TUI 中：
+
+```
+/plugins marketplace https://raw.githubusercontent.com/hxt9805/cadence/main/.kimi-plugin/marketplace.json
+```
+
+进入市场后选 **Cadence** 按 `Space` 安装；预览分支选 **Cadence (Preview)**。
+
+> 想装 preview 分支但市场文件还没合入 main 时,把上面 URL 中的 `main` 换成 `preview`。
+
+**直接安装（不走市场）**
+
+```
+/plugins install https://github.com/hxt9805/cadence
+# 预览分支:
+/plugins install https://github.com/hxt9805/cadence/tree/preview
+```
+
+安装后运行 `/reload` 重载插件并开启新会话（plugin 变更只对新会话生效）。`/plugins info cadence` 可查看 5 个 skill 的加载状态与 diagnostics。
+
+**验证安装**：`/skills list` 应能看到 `cadence-bootstrap` / `project-discuss` / `cadence-init` / `cadence-handoff` / `cadence-resume`。
+
+**使用**：skill 由 LLM 按描述自动触发,也可显式调用——`/skill:cadence-init` 初始化项目,`/skill:cadence-handoff` 整理 session,`/skill:cadence-resume` 继续上次讨论。
+
+> Kimi 形态下 subagent 调度（`recall-retriever` / `recall-consolidator` / `recall-analyzer`）依赖 LLM 读取 `skills/project-discuss/agents/*.md` 后按 Kimi subagent 机制自适应调度,无 named subagent 注册;详细适配说明见 [`skills/project-discuss/references/harness-adapters.md`](skills/project-discuss/references/harness-adapters.md)。
+
 ## 安装/降级到历史版本
 
 如果不想用最新 stable,想锁某个旧版本,用本地 marketplace fallback。把 `v0.2.0` 换成 [Releases 页](https://github.com/hxt9805/cadence/releases) 上的任意 tag。
@@ -147,22 +179,22 @@ source = "/Users/你/cadence-v0.2.0"
 ### 首次使用流程
 
 1. **初始化** — 在项目根目录跑 `/cadence-init`，按提示选模式（新项目极简模板 / 扫描已有项目生成快照）。完成后会创建 `cadence/` 目录骨架。
-2. **重新加载协议** — **CC 用户**运行 `/clear`，让 SessionStart hook 重新触发并把 cadence bootstrap 注入当前 session；**OpenCode 用户**重启 OpenCode 让 plugin re-init；**Codex 用户**重新开启 session 让 native skill discovery 重新扫描。
+2. **重新加载协议** — **CC 用户**运行 `/clear`，让 SessionStart hook 重新触发并把 cadence bootstrap 注入当前 session；**OpenCode 用户**重启 OpenCode 让 plugin re-init；**Codex 用户**重新开启 session 让 native skill discovery 重新扫描；**Kimi 用户** `/reload` 后开启新会话。
    > **为什么需要这一步？** bootstrap 注入只在 session 启动时检查项目状态；首次 init 是在 session 中途完成的，注入逻辑在你启动 session 时检查到项目尚未初始化、跳过了注入。重启 / clear 一次让它重新检测到新建的 `cadence/_INDEX.md`。**后续新 session 自动加载，无需再操作。**
 3. **开始讨论** — 之后正常和 Claude 讨论项目，cadence 按"已被承接"判据自动落地决策到 `cadence/streaming/`；长 session 时跑 `/cadence-handoff` 整理到档案。
 
 ### Session 启动行为
 
-- **已 init 项目**（项目根存在 `cadence/_INDEX.md`）：CC 通过 SessionStart hook 自动注入 bootstrap；OpenCode 通过 plugin `experimental.chat.messages.transform` hook 自动注入（行为与 CC 等价）；Codex 通过 native skill discovery 加载 cadence-bootstrap 描述并按需取全文。
+- **已 init 项目**（项目根存在 `cadence/_INDEX.md`）：CC 通过 SessionStart hook 自动注入 bootstrap；OpenCode 通过 plugin `experimental.chat.messages.transform` hook 自动注入（行为与 CC 等价）；Codex 与 Kimi Code 通过 native skill discovery 加载 cadence-bootstrap 描述并按需取全文。
 - **未 init 项目**：bootstrap 不注入，cadence 不接入；用户主动跑 `/cadence-init` 才进入工作流。CC / OpenCode / Codex 行为一致。
 
 ### 命令对照
 
-| 操作 | Claude Code | OpenCode | Codex |
-| --- | --- | --- | --- |
-| 初始化项目 | `/cadence-init` | `/cadence-init` | `$cadence:cadence-init` |
-| 整理本 session 到档案 | `/cadence-handoff` | `/cadence-handoff` | `$cadence:cadence-handoff` |
-| 继续之前某次 session | `/cadence-resume` | `/cadence-resume` | `$cadence:cadence-resume` |
+| 操作 | Claude Code | OpenCode | Codex | Kimi Code |
+| --- | --- | --- | --- | --- |
+| 初始化项目 | `/cadence-init` | `/cadence-init` | `$cadence:cadence-init` | `/skill:cadence-init` |
+| 整理本 session 到档案 | `/cadence-handoff` | `/cadence-handoff` | `$cadence:cadence-handoff` | `/skill:cadence-handoff` |
+| 继续之前某次 session | `/cadence-resume` | `/cadence-resume` | `$cadence:cadence-resume` | `/skill:cadence-resume` |
 
 详细约定见 [`skills/cadence-bootstrap/SKILL.md`](skills/cadence-bootstrap/SKILL.md)。
 
@@ -189,6 +221,14 @@ codex plugin marketplace upgrade cadence
 ```
 
 完成后重启 Codex CLI / App 让新 skill 生效。
+
+### Kimi Code CLI
+
+```
+/plugins marketplace https://raw.githubusercontent.com/hxt9805/cadence/main/.kimi-plugin/marketplace.json
+```
+
+重新进入市场,对已安装的 `cadence` 按 `Enter` 更新(会显示 `update <本地版本> → <最新版本>`),然后 `/reload` 并开启新会话。
 
 ## 从早期版本迁移
 
@@ -223,16 +263,16 @@ Remove-Item -Recurse -Force "$HOME\.codex\plugins\cache\cadence-dev" -ErrorActio
 
 ### Harness 形态
 
-cadence 在 **Claude Code 与 OpenCode 上为 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 通过兼容层支持:
+cadence 在 **Claude Code 与 OpenCode 上为 first-class 形态**（两边都通过原生机制支持自动 bootstrap 注入、Task tool fork named subagent、context 隔离）。Codex CLI / App / IDE 与 Kimi Code CLI 通过兼容层支持:
 
-| 能力 | Claude Code（first-class） | OpenCode（first-class） | Codex（兼容层） |
-| --- | --- | --- | --- |
-| Bootstrap 注入 | SessionStart hook 自动 | plugin `experimental.chat.messages.transform` hook 自动 | native skill discovery + LLM 按需取全文 |
-| Subagent fork | Task tool 一键自主 fork（CC 自动加载 `agents/*.md`） | Task tool 一键自主 fork（plugin 启动时注册 named subagent，prompt body 预加载） | 主 LLM 用 `spawn_agent` + XML 包裹模拟 |
-| 插件路径变量 | `${CLAUDE_PLUGIN_ROOT}` 注入 | LLM 按"当前 skill root 的相对路径"自解析 | LLM 按"当前 skill root 的相对路径"自解析 |
-| Slash command | `/cadence-handoff` | `/cadence-handoff`（OpenCode 自动从 skill name 生成） | `$cadence:cadence-handoff` |
+| 能力 | Claude Code（first-class） | OpenCode（first-class） | Codex（兼容层） | Kimi Code（兼容层） |
+| --- | --- | --- | --- | --- |
+| Bootstrap 注入 | SessionStart hook 自动 | plugin `experimental.chat.messages.transform` hook 自动 | native skill discovery + LLM 按需取全文 | native skill discovery + LLM 按需取全文（与 Codex 同策略） |
+| Subagent fork | Task tool 一键自主 fork（CC 自动加载 `agents/*.md`） | Task tool 一键自主 fork（plugin 启动时注册 named subagent，prompt body 预加载） | 主 LLM 用 `spawn_agent` + XML 包裹模拟 | 主 LLM 读 `agents/*.md` 后按 Kimi subagent 机制自适应调度 |
+| 插件路径变量 | `${CLAUDE_PLUGIN_ROOT}` 注入 | LLM 按"当前 skill root 的相对路径"自解析 | LLM 按"当前 skill root 的相对路径"自解析 | LLM 按"当前 skill root 的相对路径"自解析 |
+| Slash command | `/cadence-handoff` | `/cadence-handoff`（OpenCode 自动从 skill name 生成） | `$cadence:cadence-handoff` | `/skill:cadence-handoff` |
 
-Codex 形态下部分行为**依赖 LLM 自适应**（尤其是路径解析与 subagent 调用形式），corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律 + OpenCode 工具映射见 [`skills/project-discuss/references/harness-adapters.md`](skills/project-discuss/references/harness-adapters.md)。
+Codex / Kimi 形态下部分行为**依赖 LLM 自适应**（尤其是路径解析与 subagent 调用形式），corner case 可能需要主 LLM 推断到位。详细 mapping + 调度铁律 + OpenCode 工具映射见 [`skills/project-discuss/references/harness-adapters.md`](skills/project-discuss/references/harness-adapters.md)。
 
 ### 操作系统
 
