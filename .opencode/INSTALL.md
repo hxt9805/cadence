@@ -67,7 +67,7 @@ OpenCode 通过 git-backed package spec 装 cadence。某些 OpenCode / Bun 版�
 
 ```json
 {
-  "plugin": ["cadence@git+https://github.com/hxt9805/cadence.git#v0.5.0"]
+  "plugin": ["cadence@git+https://github.com/hxt9805/cadence.git#v0.6.0"]
 }
 ```
 

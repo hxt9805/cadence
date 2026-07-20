@@ -2,6 +2,33 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.6.0] - 2026-07-20
+
+cadence v0.6:domain-neutral recording fidelity(记录保真度协议)+ 项目发现泛化 + Kimi Code CLI 支持。
+
+**核心成果**:决定记录从"记了就行"升级为"按重要性分级、可校验的保真度协议"——记 阶段自适应保真度、整 阶段归档前强制 canonical coverage、查/resume 阶段走 verified canonical pointers,三阶段全部有 validator 兜底。同时 cadence-init 项目扫描不再假设特定项目形态,任意领域项目均可初始化。
+
+### Added
+- **Recording fidelity 分级协议** — 新增 `project-discuss/references/recording-fidelity.md`:记 阶段按决定的重要性自适应记录粒度(关键决定必须带 rationale,琐碎决定允许简记),`cadence-bootstrap` / `project-discuss` L0 层同步接入
+- **归档前 canonical coverage 强制校验** — `recall-consolidator` 生成的归档计划必须证明 streaming entry 已被 canonical 文档覆盖才允许 archive,`validate_consolidator_plan.py` 新增 coverage 校验(缺覆盖直接 fail)
+- **Handoff / Resume 走 verified canonical pointers** — `cadence-handoff` 写 snapshot 时校验指针指向真实 canonical 内容,`cadence-resume` 恢复时先验证指针有效性,防止从失效书签恢复出错误上下文(`validate_handoff.py` 同步升级)
+- **Streaming entry 保真度校验** — `validate_streaming.py` 新增 domain-neutral decision fidelity 检测(如高重要性决定缺 rationale 会被标出)
+- **Kimi Code CLI 安装支持** — 新增 `kimi.plugin.json` manifest + `.kimi-plugin/marketplace.json` 自定义 marketplace,README 增加 Kimi Code 安装说明(兼容层,与 Codex 同级)
+- 跨 runtime(CC / OpenCode / Codex)recording fidelity 回归测试 + domain-neutral project 契约测试
+
+### Changed
+- **cadence 项目发现泛化** — `cadence-init` 的 `project-scanner` / `scan-rules` 重写:不再假设软件项目形态,任意领域(写作、研究、生活规划等)项目均可 `/cadence-init`;`query-behavior.md` 同步去领域化
+- `recording-protocol.md` 接入 fidelity 分级引用,`project-discuss/SKILL.md` / `cadence-bootstrap/SKILL.md` 相应精简重排
+
+### Fixed
+- **Codex preview marketplace 无法安装** — 移除损坏的 `.agents/plugins/marketplace.json`,preview channel 在 Codex 下恢复可装(附 runtime loading 契约测试防回归)
+
+### Migration notes
+- 从 v0.5.0 升级:`/plugin marketplace update cadence` + `/plugin update cadence@cadence` + `/clear`,无需额外操作
+- 已有 cadence 档案完全兼容;fidelity 校验只约束新写入的 entry
+
+---
+
 ## [0.5.0] - 2026-05-24
 
 cadence v0.5 协议三层化改造完成 + dual-channel marketplace 引入。

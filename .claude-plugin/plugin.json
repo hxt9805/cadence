@@ -1,6 +1,6 @@
 {
   "name": "cadence",
-  "version": "0.6.0-preview.1",
+  "version": "0.6.0",
   "description": "讨论驱动的通用项目工作流插件 — 通过记 / 整 / 查三阶段协议自动落地决定、约束、待决问题和下一步,支持长 session handoff 与跨 session resume(Claude Code 与 OpenCode 均 first-class,Codex 兼容层)。",
   "author": {
     "name": "hxt9805"
