@@ -61,7 +61,15 @@ agent 的 system prompt（`agents/*.md` body）已由插件预加载——**调�
 
 ## 更新
 
-OpenCode 通过 git-backed package spec 装 cadence。某些 OpenCode / Bun 版本会在 lockfile 或缓存里 pin 已解析的 git dependency，重启不一定拉到新 commit。如果更新没生效，清 OpenCode 包缓存或重装 plugin。
+OpenCode 通过 git-backed package spec 装 cadence。某些 OpenCode / Bun 版本会在 lockfile 或缓存里 pin 已解析的 git dependency，重启不一定拉到新 commit。如果更新没生效，在包缓存目录里强制重新解析：
+
+```bash
+cd ~/.cache/opencode/packages/cadence@git+https_/github.com/hxt9805/cadence.git
+npm install cadence@github:hxt9805/cadence --no-audit --no-fund
+grep '"version"' node_modules/cadence/package.json   # 确认已是新版本
+```
+
+然后重启 OpenCode。也可以直接删掉整个 `~/.cache/opencode/packages/cadence@git+https_/` 目录再重启，让 OpenCode 重新安装。
 
 锁版本：
 

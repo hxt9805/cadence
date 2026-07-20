@@ -124,8 +124,6 @@ enabled = true
 
 进入市场后选 **Cadence** 按 `Space` 安装；预览分支选 **Cadence (Preview)**。
 
-> 想装 preview 分支但市场文件还没合入 main 时,把上面 URL 中的 `main` 换成 `preview`。
-
 **直接安装（不走市场）**
 
 ```
@@ -144,26 +142,26 @@ enabled = true
 
 ## 安装/降级到历史版本
 
-如果不想用最新 stable,想锁某个旧版本,用本地 marketplace fallback。把 `v0.2.0` 换成 [Releases 页](https://github.com/hxt9805/cadence/releases) 上的任意 tag。
+如果不想用最新 stable,想锁某个旧版本,用本地 marketplace fallback。把 `v0.5.0` 换成 [Releases 页](https://github.com/hxt9805/cadence/releases) 上的任意 tag。
 
 ### Claude Code
 
 ```bash
-git clone --branch v0.2.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.2.0
+git clone --branch v0.5.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.5.0
 # 注意：该目录是 CC 的 marketplace 源,clone 后不要删除,否则 plugin 会失效
 ```
 
 然后在 CC 里：
 
 ```
-/plugin marketplace add ~/cadence-v0.2.0
+/plugin marketplace add ~/cadence-v0.5.0
 /plugin install cadence@cadence
 ```
 
 ### Codex CLI / App
 
 ```bash
-git clone --branch v0.2.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.2.0
+git clone --branch v0.5.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.5.0
 ```
 
 `~/.codex/config.toml` 改成：
@@ -171,8 +169,12 @@ git clone --branch v0.2.0 https://github.com/hxt9805/cadence.git ~/cadence-v0.2.
 ```toml
 [marketplaces.cadence]
 source_type = "local"
-source = "/Users/你/cadence-v0.2.0"
+source = "/Users/你/cadence-v0.5.0"
 ```
+
+### OpenCode / Kimi Code
+
+OpenCode 在 `opencode.json` 的 plugin spec 上加 tag 后缀即可锁版本（`cadence@git+https://github.com/hxt9805/cadence.git#v0.5.0`，详见 [`.opencode/INSTALL.md`](.opencode/INSTALL.md)）；Kimi Code 用 `/plugins install https://github.com/hxt9805/cadence/tree/<tag>` 指向具体 tag。
 
 ## 使用
 
@@ -214,7 +216,29 @@ cadence 不会自动更新；远端发布新版本后需要手动触发。
 
 > Windows 上 `/plugin marketplace update` 可能因文件锁报 `EBUSY: resource busy or locked`——这是 CC 端的 known issue（CC 自身持有 marketplace 目录文件句柄导致 rename 失败）。临时 workaround：完全退出 CC → `Remove-Item -Recurse -Force "$HOME\.claude\plugins\marketplaces\cadence*"` → 重新打开 CC → 重新跑 `/plugin marketplace add` 安装命令。
 
+### OpenCode
+
+重启 OpenCode **不一定**拉到新版本——OpenCode 的包缓存里有 lockfile 会把 git dependency 钉在旧 commit。可靠的更新方式是在缓存目录里强制重新解析：
+
+```bash
+cd ~/.cache/opencode/packages/cadence@git+https_/github.com/hxt9805/cadence.git
+npm install cadence@github:hxt9805/cadence --no-audit --no-fund
+grep '"version"' node_modules/cadence/package.json   # 确认已是新版本
+```
+
+然后重启 OpenCode。也可以直接删掉整个 `~/.cache/opencode/packages/cadence@git+https_/` 目录让 OpenCode 重装。详见 [`.opencode/INSTALL.md`](.opencode/INSTALL.md) 的「更新」段。
+
 ### Codex CLI / App
+
+**Symlink 模式（推荐安装方式对应的更新方式）**：
+
+```bash
+git -C ~/.codex/cadence pull
+```
+
+（clone 位置若自定义过，把 `~/.codex/cadence` 换成你的 clone 路径。）完成后重启 Codex 让新 skill 生效。
+
+**Marketplace 模式**（实验性，见安装段的已知问题说明）：
 
 ```bash
 codex plugin marketplace upgrade cadence
