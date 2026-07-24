@@ -4,5 +4,20 @@
   "description": "Discussion-driven workflow plugin for Claude Code / OpenCode / Codex",
   "type": "module",
   "main": ".opencode/plugin/cadence.js",
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "workflow",
+    "project-management",
+    "discussion",
+    "session-handoff"
+  ],
+  "pi": {
+    "extensions": [
+      "./.pi/extensions/cadence.ts"
+    ],
+    "skills": [
+      "./skills"
+    ]
+  }
 }
