@@ -5,7 +5,7 @@
       "id": "cadence",
       "tier": "third-party",
       "displayName": "Cadence",
-      "version": "0.6.0",
+      "version": "0.6.1",
       "description": "讨论驱动的通用项目工作流插件 — 记 / 整 / 查 三阶段协议,把 session 中已承接的决定落地到项目档案(Claude Code / OpenCode first-class,Codex / Kimi Code 兼容层)",
       "homepage": "https://github.com/hxt9805/cadence",
       "keywords": [

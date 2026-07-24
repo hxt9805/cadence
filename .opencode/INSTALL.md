@@ -75,7 +75,7 @@ grep '"version"' node_modules/cadence/package.json   # 确认已是新版本
 
 ```json
 {
-  "plugin": ["cadence@git+https://github.com/hxt9805/cadence.git#v0.6.0"]
+  "plugin": ["cadence@git+https://github.com/hxt9805/cadence.git#v0.6.1"]
 }
 ```
 

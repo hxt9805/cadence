@@ -2,6 +2,18 @@
 
 All notable changes to cadence are documented here. This project adheres to [Semantic Versioning](https://semver.org/) starting from v0.2.0.
 
+## [0.6.1] - 2026-07-24
+cadence v0.6.1:新增 Pi / OMP harness 适配(Pi extension)— cadence-bootstrap 在 OMP 中自动注入。
+
+### Added
+- **Pi extension(OMP / Pi-compatible harnesses)** — 新增 `.pi/extensions/cadence.ts` + `package.json` `pi` 字段:OMP 执行 Pi extension(不执行 CC hooks),此前 cadence-bootstrap 从未注入、`project-discuss` 永不激活。extension 复刻 CC SessionStart hook 与 `.opencode/plugin/cadence.js` 的注入逻辑:项目根含 `cadence/_INDEX.md` 时,把 bootstrap skill body 注入首条 user message,`session_start` / `session_compact` 后重注入,`agent_end` 后抑制,marker 防重复。记 / 整 / 查 协议与 project-discuss 激活在 OMP 下恢复可靠
+
+### Migration notes
+- OMP 用户:`omp plugin upgrade cadence@cadence`(stable)或 `omp plugin upgrade cadence-preview@cadence`(preview)后重开 session 生效
+- 其他 harness(CC / OpenCode / Codex / Kimi)无变化,无需操作
+
+---
+
 ## [0.6.0] - 2026-07-20
 
 cadence v0.6:domain-neutral recording fidelity(记录保真度协议)+ 项目发现泛化 + Kimi Code CLI 支持。
